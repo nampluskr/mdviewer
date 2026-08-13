@@ -52,6 +52,11 @@ function fileName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
 
+function openExternalLink(url: string): void {
+  if (!window.markdownBrowser) return
+  void window.markdownBrowser.openExternalLink(url)
+}
+
 function App(): ReactElement {
   const platform = window.markdownBrowser?.platform
   const [rootPath, setRootPath] = useState<string | null>(null)
@@ -295,7 +300,24 @@ function App(): ReactElement {
             activeTab.content.trim().length > 0 ? (
               <article className="markdown-content">
                 <MarkdownErrorBoundary>
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeTab.content}</ReactMarkdown>
+                  <ReactMarkdown
+                    remarkPlugins={[remarkGfm]}
+                    components={{
+                      a: ({ href, children }) => (
+                        <a
+                          href={href}
+                          onClick={(event) => {
+                            event.preventDefault()
+                            if (href) openExternalLink(href)
+                          }}
+                        >
+                          {children}
+                        </a>
+                      )
+                    }}
+                  >
+                    {activeTab.content}
+                  </ReactMarkdown>
                 </MarkdownErrorBoundary>
               </article>
             ) : <p className="document-status">This Markdown file is empty.</p>

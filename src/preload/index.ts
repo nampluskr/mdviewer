@@ -5,5 +5,6 @@ contextBridge.exposeInMainWorld('markdownBrowser', {
   selectRootFolder: () => ipcRenderer.invoke('filesystem:select-root-folder'),
   listDirectory: (directoryPath?: string) => ipcRenderer.invoke('filesystem:list-directory', directoryPath),
   readMarkdownFile: (filePath: string) => ipcRenderer.invoke('filesystem:read-markdown-file', filePath),
-  consumeInitialMarkdownFile: () => ipcRenderer.invoke('filesystem:consume-initial-markdown-file')
+  consumeInitialMarkdownFile: () => ipcRenderer.invoke('filesystem:consume-initial-markdown-file'),
+  openExternalLink: (url: string) => ipcRenderer.invoke('shell:open-external-link', url)
 })

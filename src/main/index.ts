@@ -131,6 +131,21 @@ async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<Init
 }
 
 function registerFileSystemHandlers(): void {
+  ipcMain.handle('shell:open-external-link', async (_event, url: string): Promise<FileSystemResult<null>> => {
+    if (typeof url !== 'string') return failed('INVALID_PATH', 'A valid URL is required.')
+
+    try {
+      const destination = new URL(url)
+      if (destination.protocol !== 'https:' && destination.protocol !== 'http:') {
+        return failed('INVALID_PATH', 'Only HTTP and HTTPS links can be opened.')
+      }
+      await shell.openExternal(destination.toString())
+      return succeeded(null)
+    } catch {
+      return failed('INVALID_PATH', 'The link URL is invalid.')
+    }
+  })
+
   ipcMain.handle('filesystem:select-root-folder', async (event): Promise<FileSystemResult<{ rootPath: string }>> => {
     const window = BrowserWindow.fromWebContents(event.sender)
     const dialogOptions: OpenDialogOptions = { properties: ['openDirectory'] }
@@ -245,6 +260,7 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
     }
   })
 
+  window.setMenuBarVisibility(false)
   const webContentsId = window.webContents.id
   if (initialMarkdownResult.ok && initialMarkdownResult.value) {
     windowRoots.set(webContentsId, initialMarkdownResult.value.rootPath)

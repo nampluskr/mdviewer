@@ -43,6 +43,7 @@ interface MarkdownBrowserApi {
   listDirectory: (directoryPath?: string) => Promise<FileSystemResult<DirectoryEntry[]>>
   readMarkdownFile: (filePath: string) => Promise<FileSystemResult<{ content: string }>>
   consumeInitialMarkdownFile: () => Promise<FileSystemResult<InitialMarkdownFile | null>>
+  openExternalLink: (url: string) => Promise<FileSystemResult<null>>
 }
 
 interface Window {

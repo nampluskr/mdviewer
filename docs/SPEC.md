@@ -4,7 +4,7 @@
 
 ### 1.1 Current Implementation Status
 
-Phase 8 is complete. File-read failures are stored on the affected tab so a deleted or inaccessible Markdown document shows a specific tab-level error without closing the application. Directory-list failures are presented in the Explorer and are also surfaced when the selected Root becomes unavailable. The main process maintains absolute-path, Root-containment, realpath, directory/file-type, and permission checks for all filesystem IPC operations. Invalid launch files, unsupported files, and Root-external paths return structured errors without exposing direct Node.js access to the renderer.
+Phase 9 is complete. electron-builder packages the compiled Electron application as an NSIS Windows installer. The installer uses the Markdown Browser application identifier, permits installation-directory selection, writes artifacts to the ignored `release` directory, and declares a Viewer association for `.md` Markdown documents. HTTP and HTTPS Markdown links are passed through preload IPC to a main-process URL validator before opening in the default browser; in-window navigation remains blocked. File launches continue to pass the selected document path to the secure main-process launch handling.
 
 Markdown Browser는 로컬 Markdown 문서를 읽기 위한 경량 Windows 데스크톱 애플리케이션이다.
 

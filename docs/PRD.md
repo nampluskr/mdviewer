@@ -4,7 +4,7 @@
 
 ### Current Implementation Status
 
-Phase 8 is complete. Markdown-file read failures are retained on the affected tab and shown without terminating the application. Explorer listing errors, including an unavailable Root Folder or access denial, are displayed in the Explorer. The main process continues to validate all IPC paths as absolute, Root-contained, real filesystem paths and rejects unsupported file types before reading.
+Phase 9 is complete. The project provides an electron-builder NSIS Windows installer configuration and associates `.md` files with Markdown Browser. The package script builds the Electron application and produces a Windows installer in the ignored `release` directory. HTTP and HTTPS Markdown links open through a validated main-process IPC handler in the default browser, while application navigation remains blocked.
 
 Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문서를 탐색하고, 여러 문서를 탭으로 열람할 수 있는 경량 Windows 데스크톱 애플리케이션이다.
 

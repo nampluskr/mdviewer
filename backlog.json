@@ -194,7 +194,7 @@
       "id": "phase-09",
       "order": 9,
       "title": "패키징",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-08"],
       "scope": [
         "Windows 설치 파일 또는 실행 패키지 생성",

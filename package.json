@@ -1,6 +1,7 @@
 {
   "name": "markdown-browser",
   "version": "0.1.0",
+  "author": "nampluskr",
   "private": true,
   "description": "A lightweight Windows desktop browser for local Markdown documents.",
   "main": "out/main/index.js",
@@ -9,7 +10,8 @@
     "build": "electron-vite build",
     "preview": "electron-vite preview",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "package:win": "npm run build && electron-builder --win nsis --publish never"
   },
   "dependencies": {
     "@electron-toolkit/preload": "^3.0.0",
@@ -25,9 +27,30 @@
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.0.0",
     "electron": "^35.0.0",
+    "electron-builder": "^26.15.3",
     "electron-vite": "^3.0.0",
     "typescript": "^5.0.0",
     "vite": "^6.0.0",
     "vitest": "^4.1.10"
+  },
+  "build": {
+    "appId": "com.nampluskr.markdownbrowser",
+    "productName": "Markdown Browser",
+    "directories": { "output": "release" },
+    "files": ["out/**/*", "package.json"],
+    "win": { "target": ["nsis"] },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "artifactName": "${productName}-${version}-Setup.${ext}"
+    },
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "MarkdownDocument",
+        "description": "Markdown Document",
+        "role": "Viewer"
+      }
+    ]
   }
 }

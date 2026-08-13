@@ -17,3 +17,12 @@ Markdown Browser는 Windows에서 로컬 Markdown 문서를 탐색하고 읽기 
 4. `+` 버튼으로 새 탭을 만들고, 탭을 선택하거나 닫아 문서를 관리합니다.
 
 Windows Explorer에서 `.md` 파일을 직접 열어 Markdown Browser를 시작할 수도 있습니다.
+## Windows 패키지 만들기
+
+Windows 설치 프로그램은 다음 명령으로 생성합니다.
+
+```powershell
+npm run package:win
+```
+
+생성된 NSIS 설치 프로그램은 `release` 폴더에 저장되며, 설치 시 `.md` 파일을 Markdown Browser와 연결합니다.
