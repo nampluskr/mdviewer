@@ -1,8 +1,8 @@
 # Markdown Browser
 
-## Release documents
+## 릴리스 문서
 
-The completed v0.1 plan, product requirements, specification, and backlog are preserved in `docs/releases/v0.1/`. Future releases use their own `docs/releases/v{major}.{minor}/` directory.
+v0.1 계획, 제품 요구사항, 명세, 백로그, 릴리스 노트는 `docs/releases/v0.1/`에 보관합니다. 이후 릴리스는 각각 `docs/releases/v{major}.{minor}/` 경로를 사용합니다.
 
 Markdown Browser는 Windows에서 로컬 Markdown 문서를 탐색하고 읽기 위한 경량 데스크톱 애플리케이션입니다. 문서 폴더를 열어 Markdown 파일을 Explorer에서 찾고, 여러 문서를 탭으로 전환하며 읽을 수 있습니다.
 
@@ -30,3 +30,24 @@ npm run package:win
 ```
 
 생성된 NSIS 설치 프로그램은 `release` 폴더에 저장되며, 설치 시 `.md` 파일을 Markdown Browser와 연결합니다.
+
+## 클론 후 Windows 패키지 생성
+
+Git에 패키징에 필요한 소스 코드와 설정 파일이 모두 포함되어 있으므로, 새 클론에서도 Windows 설치 프로그램을 만들 수 있습니다.
+
+```powershell
+git clone https://github.com/nampluskr/mdviewer.git
+cd mdviewer
+npm ci
+npm run package:win
+```
+
+`npm ci`와 `npm run package:win`은 Electron 및 NSIS 패키징 도구를 내려받을 수 있으므로 네트워크 연결이 필요할 수 있습니다.
+
+다음 폴더는 의존성 또는 빌드·패키징 과정에서 생성되며 Git에서 제외됩니다.
+
+```text
+node_modules/  # npm ci로 재생성되는 의존성
+out/           # 애플리케이션 빌드 산출물
+release/       # NSIS 설치 프로그램과 패키징 산출물
+```

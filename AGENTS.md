@@ -10,12 +10,15 @@
 - 경로 표기는 `os.path` 방식을 사용하며 `Path`를 사용하지 않는다.
 - 코드 내 주석은 영어로 작성한다.
 - 사용자의 명시적인 요청 없이 코드나 아티팩트 문서를 생성하지 않는다.
+- Markdown 문서는 한국어로 작성한다. 다만 코드, 명령어, 파일 경로, 제품·라이브러리의 고유 이름은 원문 표기를 유지한다.
 
 ## Phase Execution Workflow
 
 릴리스별 `docs/releases/v{major}.{minor}/backlog.json`과 `docs/releases/v{major}.{minor}/PLAN.md`의 Phase는 정의된 순서와 의존성을 지켜 진행한다.
 
 사용자 요청으로 구현 또는 프로젝트 내용이 변경되면, 해당 릴리스 폴더의 문서를 반드시 `PLAN.md → backlog.json → PRD.md → SPEC.md` 순서로 갱신한다.
+
+Phase 완료 여부는 해당 릴리스의 `backlog.json`에 있는 각 Phase의 `status` 필드에서만 관리한다. `README.md`, `PLAN.md`, `PRD.md`, `SPEC.md`에는 현재 또는 완료된 Phase 상태를 기록하지 않는다.
 
 각 Phase는 다음 순서로 완료한다.
 

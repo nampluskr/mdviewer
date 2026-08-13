@@ -2,10 +2,6 @@
 
 ## 1. Product Overview
 
-### Current Implementation Status
-
-Phase 9 is complete. The project provides an electron-builder NSIS Windows installer configuration and associates `.md` files with Markdown Browser. The package script builds the Electron application and produces a Windows installer in the ignored `release` directory. HTTP and HTTPS Markdown links open through a validated main-process IPC handler in the default browser, while application navigation remains blocked.
-
 Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문서를 탐색하고, 여러 문서를 탭으로 열람할 수 있는 경량 Windows 데스크톱 애플리케이션이다.
 
 핵심 목표는 Markdown 편집기가 아니라, 프로젝트 또는 문서 폴더를 대상으로 빠르게 탐색하고 읽는 전용 브라우저를 제공하는 것이다.
