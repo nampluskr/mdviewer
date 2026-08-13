@@ -4,7 +4,7 @@
 
 ### Current Implementation Status
 
-Phase 4 is complete. The renderer provides Root Folder selection, a collapsible Explorer tree for Root-subtree folders and Markdown files, Explorer visibility control, and active-tab Markdown file loading. The system folder picker, Root-subtree directory and Markdown-file listing, and Markdown content reading remain available only through the preload and IPC boundary.
+Phase 5 is complete. The renderer supports creating, selecting, closing, and switching multiple tabs. Selecting a document that is already open activates its existing tab, while selecting a different document replaces the document in the active tab. The system folder picker, Root-subtree directory and Markdown-file listing, and Markdown content reading remain available only through the preload and IPC boundary.
 
 Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문서를 탐색하고, 여러 문서를 탭으로 열람할 수 있는 경량 Windows 데스크톱 애플리케이션이다.
 

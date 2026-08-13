@@ -29,26 +29,32 @@ function App(): ReactElement {
   const [folderError, setFolderError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const nextTabNumber = useRef(1)
+  const fileLoadVersions = useRef(new Map<string, number>())
 
   const createEmptyTab = (): void => {
     const id = `empty-${nextTabNumber.current}`
     nextTabNumber.current += 1
     setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '' }])
+    setFileError(null)
     setActiveTabId(id)
   }
 
   const closeTab = (tabId: string): void => {
-    setTabs((currentTabs) => {
-      const closingIndex = currentTabs.findIndex((tab) => tab.id === tabId)
-      const remainingTabs = currentTabs.filter((tab) => tab.id !== tabId)
+    const closingIndex = tabs.findIndex((tab) => tab.id === tabId)
+    const remainingTabs = tabs.filter((tab) => tab.id !== tabId)
+    if (tabId === activeTabId) {
+      const nextActiveTab = remainingTabs[closingIndex] ?? remainingTabs[closingIndex - 1] ?? null
+      setActiveTabId(nextActiveTab?.id ?? null)
+    }
 
-      if (tabId === activeTabId) {
-        const nextActiveTab = remainingTabs[closingIndex] ?? remainingTabs[closingIndex - 1] ?? null
-        setActiveTabId(nextActiveTab?.id ?? null)
-      }
+    fileLoadVersions.current.delete(tabId)
+    setFileError(null)
+    setTabs(remainingTabs)
+  }
 
-      return remainingTabs
-    })
+  const activateTab = (tabId: string): void => {
+    setFileError(null)
+    setActiveTabId(tabId)
   }
 
   const loadDirectory = async (directoryPath: string): Promise<void> => {
@@ -102,9 +108,19 @@ function App(): ReactElement {
       return
     }
 
-    setFileError(null)
     const targetTabId = activeTabId
+    const loadVersion = (fileLoadVersions.current.get(targetTabId) ?? 0) + 1
+    fileLoadVersions.current.set(targetTabId, loadVersion)
+    const alreadyOpen = tabs.find((tab) => tab.filePath === entry.path)
+    if (alreadyOpen) {
+      setFileError(null)
+      setActiveTabId(alreadyOpen.id)
+      return
+    }
+
+    setFileError(null)
     const result = await window.markdownBrowser.readMarkdownFile(entry.path)
+    if (fileLoadVersions.current.get(targetTabId) !== loadVersion) return
     if (!result.ok) {
       setFileError(result.error.message)
       return
@@ -176,7 +192,7 @@ function App(): ReactElement {
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
             <div key={tab.id} className={tab.id === activeTabId ? 'tab is-active' : 'tab'}>
-              <button className="tab-button" type="button" role="tab" aria-selected={tab.id === activeTabId} onClick={() => setActiveTabId(tab.id)}>
+              <button className="tab-button" type="button" role="tab" aria-selected={tab.id === activeTabId} onClick={() => activateTab(tab.id)}>
                 {tab.title}
               </button>
               <button className="tab-close-button" type="button" aria-label={`Close ${tab.title}`} onClick={() => closeTab(tab.id)}>×</button>

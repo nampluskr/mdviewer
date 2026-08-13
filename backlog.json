@@ -119,7 +119,7 @@
       "id": "phase-05",
       "order": 5,
       "title": "탭 관리",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-04"],
       "scope": [
         "새 빈 탭 생성 및 활성화",
