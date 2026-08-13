@@ -133,6 +133,6 @@ v0.1의 핵심 범위는 다음과 같다.
 사용자 요청으로 구현 또는 프로젝트 내용이 변경되면 영향받는 문서를 다음 순서로 갱신한다.
 
 1. `PLAN.md`
-2. `backlog.json`
+2. `docs/releases/v0.1/backlog.json`
 3. `PRD.md`
 4. `SPEC.md`

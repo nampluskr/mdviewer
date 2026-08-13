@@ -1,5 +1,9 @@
 # Markdown Browser
 
+## Release documents
+
+The completed v0.1 plan, product requirements, specification, and backlog are preserved in `docs/releases/v0.1/`. Future releases use their own `docs/releases/v{major}.{minor}/` directory.
+
 Markdown Browser는 Windows에서 로컬 Markdown 문서를 탐색하고 읽기 위한 경량 데스크톱 애플리케이션입니다. 문서 폴더를 열어 Markdown 파일을 Explorer에서 찾고, 여러 문서를 탭으로 전환하며 읽을 수 있습니다.
 
 ## 주요 기능

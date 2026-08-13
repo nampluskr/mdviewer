@@ -13,9 +13,9 @@
 
 ## Phase Execution Workflow
 
-`backlog.json`과 `docs/PLAN.md`의 Phase는 정의된 순서와 의존성을 지켜 진행한다.
+릴리스별 `docs/releases/v{major}.{minor}/backlog.json`과 `docs/releases/v{major}.{minor}/PLAN.md`의 Phase는 정의된 순서와 의존성을 지켜 진행한다.
 
-사용자 요청으로 구현 또는 프로젝트 내용이 변경되면 영향받는 문서는 반드시 `docs/PLAN.md → backlog.json → docs/PRD.md → docs/SPEC.md` 순서로 갱신한다.
+사용자 요청으로 구현 또는 프로젝트 내용이 변경되면, 해당 릴리스 폴더의 문서를 반드시 `PLAN.md → backlog.json → PRD.md → SPEC.md` 순서로 갱신한다.
 
 각 Phase는 다음 순서로 완료한다.
 
