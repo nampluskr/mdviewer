@@ -1,0 +1,29 @@
+{
+  "name": "markdown-browser",
+  "version": "0.1.0",
+  "private": true,
+  "description": "A lightweight Windows desktop browser for local Markdown documents.",
+  "main": "out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "preview": "electron-vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@electron-toolkit/preload": "^3.0.0",
+    "@electron-toolkit/utils": "^4.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^4.0.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "electron": "^35.0.0",
+    "electron-vite": "^3.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^6.0.0"
+  }
+}

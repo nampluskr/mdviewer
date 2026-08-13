@@ -1,5 +1,8 @@
 # Dependencies
 node_modules/
+out/
+dist/
+.electron-vite/
 
 # Build and packaging outputs
 dist/
