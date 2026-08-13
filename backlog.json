@@ -62,7 +62,7 @@
       "id": "phase-02",
       "order": 2,
       "title": "보안 파일 시스템 API",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-01"],
       "scope": [
         "시스템 Folder Picker를 통한 Root Folder 선택",

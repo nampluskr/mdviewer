@@ -2,13 +2,17 @@
 
 ## 1. Overview
 
+### 1.1 Current Implementation Status
+
+Phase 2 is complete. The main process owns the selected Root Folder for each window, and exposes folder selection, Root-subtree directory listing, and Markdown reading only through the preload IPC API. Absolute-path, cross-volume, and symbolic-link boundary checks prevent Root-external access.
+
 Markdown Browser는 로컬 Markdown 문서를 읽기 위한 경량 Windows 데스크톱 애플리케이션이다.
 
 애플리케이션은 Markdown 편집기가 아니라 문서 탐색 및 열람에 집중한다. 사용자는 하나의 Root Folder를 기준으로 하위 폴더의 Markdown 문서를 Explorer에서 탐색하고, 우측 Tab 영역에서 여러 문서를 전환하며 읽는다.
 
 하나의 Browser Window는 하나의 Root Folder를 담당하며, 서로 다른 Browser Window는 독립적으로 동작한다.
 
-### 1.1 Repository README
+### 1.2 Repository README
 
 저장소 루트의 `README.md`는 외부 사용자를 위한 프로젝트 안내 문서다. README에는 다음을 간략히 포함한다.
 
