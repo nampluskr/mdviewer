@@ -5,7 +5,7 @@
 | Phase | 제목 | 내용 |
 |---|---|---|
 | 0 | 환경 구성과 Git 초기화 | 개발에 필요한 Node.js, npm, Git, Python 보조 도구를 확인하고 프로젝트 Git 저장소와 기본 `.gitignore`, 외부 사용자를 위한 README를 준비한다. |
-| 1 | 프로젝트 기반 구성 | Electron, React, TypeScript, Vite 기반 프로젝트를 구성하고 main·preload·renderer 프로세스의 기본 경계를 설정한다. |
+| 1 | 프로젝트 기반 구성 | 완료. Electron, React, TypeScript, Vite 기반 프로젝트를 구성하고 main·preload·renderer 프로세스의 기본 경계를 설정했다. |
 | 2 | 보안 파일 시스템 API | preload와 IPC를 통해 Root Folder 선택, 폴더 탐색, Markdown 파일 읽기 API를 구현한다. Root 외부 접근을 검증한다. |
 | 3 | 애플리케이션 상태와 빈 화면 | Root, Explorer 표시 여부, 탭 목록, 활성 탭 상태를 구성한다. 무인자 실행 및 마지막 탭 종료 시 `+` 버튼만 보이는 빈 화면을 구현한다. |
 | 4 | Explorer와 파일 열기 | Root Folder 하위의 Markdown 파일과 폴더 트리를 표시하고, 폴더 펼침·접힘 및 활성 탭에서의 문서 열기를 구현한다. |

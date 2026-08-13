@@ -44,7 +44,7 @@
       "id": "phase-01",
       "order": 1,
       "title": "프로젝트 기반 구성",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-00"],
       "scope": [
         "Electron, React, TypeScript, Vite 기반 프로젝트 구성",
