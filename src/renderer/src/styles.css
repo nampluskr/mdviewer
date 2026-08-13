@@ -17,8 +17,113 @@ body {
 }
 
 .app-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.empty-state {
   display: grid;
   min-height: 100vh;
-  place-content: center;
+  place-items: center;
+}
+
+.new-tab-button {
+  border: 0;
+  border-radius: 6px;
+  background: #e2e8f0;
+  color: #1e293b;
+  cursor: pointer;
+  font-size: 1.5rem;
+  line-height: 1;
+  min-height: 2.5rem;
+  min-width: 2.5rem;
+}
+
+.new-tab-button:hover {
+  background: #cbd5e1;
+}
+
+.new-tab-button:focus-visible,
+.tab-button:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.tab-bar {
+  display: flex;
+  align-items: center;
+  min-height: 3rem;
+  border-bottom: 1px solid #cbd5e1;
+  background: #f1f5f9;
+}
+
+.tab-list {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+.tab {
+  display: flex;
+  border-right: 1px solid #cbd5e1;
+}
+
+.tab-button {
+  border: 0;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  min-height: 3rem;
+  min-width: 9rem;
+  padding: 0 1rem;
+  text-align: left;
+}
+
+.tab.is-active {
+  background: #f8fafc;
+}
+
+.tab.is-active .tab-button {
+  color: #0f172a;
+  font-weight: 600;
+}
+
+.tab-close-button {
+  border: 0;
+  background: transparent;
+  color: #475569;
+  cursor: pointer;
+  font-size: 1.25rem;
+  padding: 0 0.75rem;
+}
+
+.tab-close-button:hover {
+  color: #0f172a;
+}
+
+.tab-add-button {
+  margin: 0.25rem;
+}
+
+.document-area {
+  display: flex;
+  flex: 1;
+}
+
+.explorer-placeholder {
+  width: 16rem;
+  border-right: 1px solid #cbd5e1;
+}
+
+.empty-tab-content {
+  align-self: center;
+  flex: 1;
+  padding: 2rem;
   text-align: center;
+}
+
+.empty-tab-content h1 {
+  margin: 0;
 }

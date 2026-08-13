@@ -4,7 +4,7 @@
 
 ### 1.1 Current Implementation Status
 
-Phase 2 is complete. The main process owns the selected Root Folder for each window, and exposes folder selection, Root-subtree directory listing, and Markdown reading only through the preload IPC API. Absolute-path, cross-volume, and symbolic-link boundary checks prevent Root-external access.
+Phase 3 is complete. The main process owns the selected Root Folder for each window, and exposes folder selection, Root-subtree directory listing, and Markdown reading only through the preload IPC API. Absolute-path, cross-volume, and symbolic-link boundary checks prevent Root-external access. The renderer initializes with no tabs and no active tab, creates an active empty tab from the plus button, and restores that empty state after the last tab closes.
 
 Markdown Browser는 로컬 Markdown 문서를 읽기 위한 경량 Windows 데스크톱 애플리케이션이다.
 

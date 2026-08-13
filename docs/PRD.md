@@ -4,7 +4,7 @@
 
 ### Current Implementation Status
 
-Phase 2 is complete. The system folder picker, Root-subtree directory and Markdown-file listing, and Markdown content reading are available through the preload and IPC boundary. The main process validates that requested paths remain inside the selected Root Folder.
+Phase 3 is complete. The system folder picker, Root-subtree directory and Markdown-file listing, and Markdown content reading are available through the preload and IPC boundary. The renderer now maintains Root, Explorer visibility, tabs, and active-tab state, and presents a plus-only empty screen until a new empty tab is created.
 
 Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문서를 탐색하고, 여러 문서를 탭으로 열람할 수 있는 경량 Windows 데스크톱 애플리케이션이다.
 

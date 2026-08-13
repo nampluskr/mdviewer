@@ -81,7 +81,7 @@
       "id": "phase-03",
       "order": 3,
       "title": "애플리케이션 상태와 빈 화면",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-02"],
       "scope": [
         "rootPath, explorerVisible, tabs, activeTabId 상태 관리",
