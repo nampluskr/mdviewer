@@ -8,22 +8,32 @@ interface Tab {
   content: string
 }
 
+interface DirectoryState {
+  entries: DirectoryEntry[]
+  error: string | null
+  loading: boolean
+}
+
+function fileName(path: string): string {
+  return path.split(/[\\/]/).filter(Boolean).pop() ?? path
+}
+
 function App(): ReactElement {
   const platform = window.markdownBrowser?.platform
-  const [rootPath] = useState<string | null>(null)
-  const [explorerVisible] = useState(true)
+  const [rootPath, setRootPath] = useState<string | null>(null)
+  const [explorerVisible, setExplorerVisible] = useState(true)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
+  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
+  const [directories, setDirectories] = useState<Record<string, DirectoryState>>({})
+  const [folderError, setFolderError] = useState<string | null>(null)
+  const [fileError, setFileError] = useState<string | null>(null)
   const nextTabNumber = useRef(1)
 
   const createEmptyTab = (): void => {
     const id = `empty-${nextTabNumber.current}`
     nextTabNumber.current += 1
-
-    setTabs((currentTabs) => [
-      ...currentTabs,
-      { id, filePath: null, title: 'Untitled', content: '' }
-    ])
+    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '' }])
     setActiveTabId(id)
   }
 
@@ -41,6 +51,106 @@ function App(): ReactElement {
     })
   }
 
+  const loadDirectory = async (directoryPath: string): Promise<void> => {
+    if (!window.markdownBrowser) return
+
+    setDirectories((current) => ({
+      ...current,
+      [directoryPath]: { entries: current[directoryPath]?.entries ?? [], error: null, loading: true }
+    }))
+    const result = await window.markdownBrowser.listDirectory(directoryPath)
+    setDirectories((current) => ({
+      ...current,
+      [directoryPath]: result.ok
+        ? { entries: result.value, error: null, loading: false }
+        : { entries: [], error: result.error.message, loading: false }
+    }))
+  }
+
+  const selectRootFolder = async (): Promise<void> => {
+    if (!window.markdownBrowser) return
+
+    setFolderError(null)
+    const result = await window.markdownBrowser.selectRootFolder()
+    if (!result.ok) {
+      setFolderError(result.error.message)
+      return
+    }
+
+    setRootPath(result.value.rootPath)
+    setExpandedPaths(new Set([result.value.rootPath]))
+    setDirectories({})
+    setFileError(null)
+    await loadDirectory(result.value.rootPath)
+  }
+
+  const toggleDirectory = (directoryPath: string): void => {
+    const isExpanded = expandedPaths.has(directoryPath)
+    setExpandedPaths((current) => {
+      const next = new Set(current)
+      if (isExpanded) next.delete(directoryPath)
+      else next.add(directoryPath)
+      return next
+    })
+    if (!isExpanded) void loadDirectory(directoryPath)
+  }
+
+  const openMarkdownFile = async (entry: DirectoryEntry): Promise<void> => {
+    if (!window.markdownBrowser) return
+    if (!activeTabId) {
+      setFileError('Create or select a tab before opening a Markdown file.')
+      return
+    }
+
+    setFileError(null)
+    const targetTabId = activeTabId
+    const result = await window.markdownBrowser.readMarkdownFile(entry.path)
+    if (!result.ok) {
+      setFileError(result.error.message)
+      return
+    }
+
+    setTabs((currentTabs) => currentTabs.map((tab) => (
+      tab.id === targetTabId
+        ? { ...tab, filePath: entry.path, title: entry.name, content: result.value.content }
+        : tab
+    )))
+  }
+
+  const renderDirectory = (directoryPath: string, depth: number): ReactElement => {
+    const directory = directories[directoryPath]
+    const entries = directory?.entries ?? []
+
+    return (
+      <ul className="explorer-tree" aria-label={depth === 0 ? 'Root folder contents' : undefined}>
+        {entries.map((entry) => {
+          if (entry.type === 'markdown') {
+            return (
+              <li key={entry.path}>
+                <button className="explorer-file" type="button" onClick={() => void openMarkdownFile(entry)}>
+                  {entry.name}
+                </button>
+              </li>
+            )
+          }
+
+          const isExpanded = expandedPaths.has(entry.path)
+          return (
+            <li key={entry.path}>
+              <button className="explorer-directory" type="button" onClick={() => toggleDirectory(entry.path)} aria-expanded={isExpanded}>
+                <span aria-hidden="true">{isExpanded ? '−' : '+'}</span>
+                {entry.name}
+              </button>
+              {isExpanded ? renderDirectory(entry.path, depth + 1) : null}
+            </li>
+          )
+        })}
+        {directory?.loading ? <li className="explorer-status">Loading folder…</li> : null}
+        {directory?.error ? <li className="explorer-error">{directory.error}</li> : null}
+      </ul>
+    )
+  }
+
   if (!platform) {
     return (
       <main className="app-shell" role="alert">
@@ -53,9 +163,7 @@ function App(): ReactElement {
   if (tabs.length === 0) {
     return (
       <main className="empty-state">
-        <button className="new-tab-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">
-          +
-        </button>
+        <button className="new-tab-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">+</button>
       </main>
     )
   }
@@ -68,35 +176,31 @@ function App(): ReactElement {
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
             <div key={tab.id} className={tab.id === activeTabId ? 'tab is-active' : 'tab'}>
-              <button
-                className="tab-button"
-                type="button"
-                role="tab"
-                aria-selected={tab.id === activeTabId}
-                onClick={() => setActiveTabId(tab.id)}
-              >
+              <button className="tab-button" type="button" role="tab" aria-selected={tab.id === activeTabId} onClick={() => setActiveTabId(tab.id)}>
                 {tab.title}
               </button>
-              <button
-                className="tab-close-button"
-                type="button"
-                aria-label={`Close ${tab.title}`}
-                onClick={() => closeTab(tab.id)}
-              >
-                ×
-              </button>
+              <button className="tab-close-button" type="button" aria-label={`Close ${tab.title}`} onClick={() => closeTab(tab.id)}>×</button>
             </div>
           ))}
         </div>
-        <button className="new-tab-button tab-add-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">
-          +
+        <button className="toolbar-button" type="button" onClick={() => setExplorerVisible((visible) => !visible)}>
+          {explorerVisible ? 'Hide Explorer' : 'Show Explorer'}
         </button>
+        <button className="new-tab-button tab-add-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">+</button>
       </header>
       <section className="document-area" role="tabpanel">
-        {explorerVisible && rootPath ? <aside className="explorer-placeholder" aria-label="Explorer" /> : null}
-        <div className="empty-tab-content">
+        {explorerVisible ? (
+          <aside className="explorer" aria-label="Explorer">
+            <button className="open-folder-button" type="button" onClick={() => void selectRootFolder()}>Open Folder</button>
+            {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
+            {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse Markdown files.</p>}
+            {rootPath ? renderDirectory(rootPath, 0) : null}
+          </aside>
+        ) : null}
+        <div className="document-content">
+          {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
           <h1>{activeTab?.title}</h1>
-          <p>This tab is ready for a Markdown document.</p>
+          {activeTab?.filePath ? <pre className="markdown-source">{activeTab.content}</pre> : <p>This tab is ready for a Markdown document.</p>}
         </div>
       </section>
     </main>

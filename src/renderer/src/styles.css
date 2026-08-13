@@ -4,126 +4,55 @@
   font-family: "Segoe UI", sans-serif;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
+body { margin: 0; }
+#root { min-height: 100vh; }
+.app-shell { display: flex; flex-direction: column; min-height: 100vh; }
+.empty-state { display: grid; min-height: 100vh; place-items: center; }
 
-body {
-  margin: 0;
-}
-
-#root {
-  min-height: 100vh;
-}
-
-.app-shell {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-.empty-state {
-  display: grid;
-  min-height: 100vh;
-  place-items: center;
+.new-tab-button, .toolbar-button, .open-folder-button, .explorer-file, .explorer-directory {
+  border: 0;
+  cursor: pointer;
+  font: inherit;
 }
 
 .new-tab-button {
-  border: 0;
   border-radius: 6px;
   background: #e2e8f0;
   color: #1e293b;
-  cursor: pointer;
   font-size: 1.5rem;
   line-height: 1;
   min-height: 2.5rem;
   min-width: 2.5rem;
 }
+.new-tab-button:hover { background: #cbd5e1; }
+.new-tab-button:focus-visible, .tab-button:focus-visible, .tab-close-button:focus-visible, .toolbar-button:focus-visible, .open-folder-button:focus-visible, .explorer-file:focus-visible, .explorer-directory:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
 
-.new-tab-button:hover {
-  background: #cbd5e1;
-}
+.tab-bar { display: flex; align-items: center; min-height: 3rem; border-bottom: 1px solid #cbd5e1; background: #f1f5f9; }
+.tab-list { display: flex; flex: 1; min-width: 0; overflow-x: auto; }
+.tab { display: flex; border-right: 1px solid #cbd5e1; }
+.tab-button { border: 0; background: transparent; color: #475569; cursor: pointer; min-height: 3rem; min-width: 9rem; overflow: hidden; padding: 0 1rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.tab.is-active { background: #f8fafc; }
+.tab.is-active .tab-button { color: #0f172a; font-weight: 600; }
+.tab-close-button { border: 0; background: transparent; color: #475569; cursor: pointer; font-size: 1.25rem; padding: 0 .75rem; }
+.tab-close-button:hover { color: #0f172a; }
+.tab-add-button { margin: .25rem; }
+.toolbar-button { align-self: stretch; background: transparent; color: #334155; padding: 0 .75rem; }
+.toolbar-button:hover { background: #e2e8f0; }
 
-.new-tab-button:focus-visible,
-.tab-button:focus-visible {
-  outline: 2px solid #2563eb;
-  outline-offset: 2px;
-}
+.document-area { display: flex; flex: 1; min-height: 0; }
+.explorer { width: 17rem; flex: 0 0 17rem; overflow: auto; border-right: 1px solid #cbd5e1; background: #f8fafc; padding: .75rem; }
+.open-folder-button { width: 100%; border-radius: 4px; background: #2563eb; color: #fff; padding: .5rem .75rem; }
+.open-folder-button:hover { background: #1d4ed8; }
+.root-name { overflow: hidden; margin: .75rem 0 .4rem; color: #0f172a; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.explorer-tree { margin: 0; padding-left: 1rem; list-style: none; }
+.explorer-tree:first-of-type { padding-left: 0; }
+.explorer-file, .explorer-directory { display: flex; width: 100%; gap: .4rem; background: transparent; color: #334155; padding: .25rem; text-align: left; }
+.explorer-file:hover, .explorer-directory:hover { background: #e2e8f0; color: #0f172a; }
+.explorer-status, .explorer-error { margin: .75rem 0; font-size: .875rem; }
+.explorer-status { color: #64748b; }
+.explorer-error, .document-error { color: #b91c1c; }
 
-.tab-bar {
-  display: flex;
-  align-items: center;
-  min-height: 3rem;
-  border-bottom: 1px solid #cbd5e1;
-  background: #f1f5f9;
-}
-
-.tab-list {
-  display: flex;
-  flex: 1;
-  min-width: 0;
-  overflow-x: auto;
-}
-
-.tab {
-  display: flex;
-  border-right: 1px solid #cbd5e1;
-}
-
-.tab-button {
-  border: 0;
-  background: transparent;
-  color: #475569;
-  cursor: pointer;
-  min-height: 3rem;
-  min-width: 9rem;
-  padding: 0 1rem;
-  text-align: left;
-}
-
-.tab.is-active {
-  background: #f8fafc;
-}
-
-.tab.is-active .tab-button {
-  color: #0f172a;
-  font-weight: 600;
-}
-
-.tab-close-button {
-  border: 0;
-  background: transparent;
-  color: #475569;
-  cursor: pointer;
-  font-size: 1.25rem;
-  padding: 0 0.75rem;
-}
-
-.tab-close-button:hover {
-  color: #0f172a;
-}
-
-.tab-add-button {
-  margin: 0.25rem;
-}
-
-.document-area {
-  display: flex;
-  flex: 1;
-}
-
-.explorer-placeholder {
-  width: 16rem;
-  border-right: 1px solid #cbd5e1;
-}
-
-.empty-tab-content {
-  align-self: center;
-  flex: 1;
-  padding: 2rem;
-  text-align: center;
-}
-
-.empty-tab-content h1 {
-  margin: 0;
-}
+.document-content { flex: 1; overflow: auto; padding: 2rem; }
+.document-content h1 { margin-top: 0; }
+.markdown-source { margin: 0; white-space: pre-wrap; word-break: break-word; }

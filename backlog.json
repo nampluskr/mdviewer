@@ -100,7 +100,7 @@
       "id": "phase-04",
       "order": 4,
       "title": "Explorer와 파일 열기",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-03"],
       "scope": [
         "Root Folder와 하위 폴더의 트리 표시",
