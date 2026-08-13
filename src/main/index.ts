@@ -1,8 +1,9 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import type { OpenDialogOptions } from 'electron'
 import { promises as fs } from 'node:fs'
-import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { is } from '@electron-toolkit/utils'
+import { isWithinRoot } from './filesystem-boundary'
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => {
@@ -65,14 +66,6 @@ function succeeded<T>(value: T): FileSystemResult<T> {
 
 function failed<T>(code: FileSystemErrorCode, message: string): FileSystemResult<T> {
   return { ok: false, error: { code, message } }
-}
-
-function isWithinRoot(rootPath: string, candidatePath: string): boolean {
-  const relativePath = relative(rootPath, candidatePath)
-  return (
-    relativePath === '' ||
-    (!isAbsolute(relativePath) && !relativePath.startsWith(`..${sep}`) && relativePath !== '..')
-  )
 }
 
 function errorResult<T>(error: unknown, fallbackCode: FileSystemErrorCode, fallbackMessage: string): FileSystemResult<T> {
@@ -168,18 +161,27 @@ function registerFileSystemHandlers(): void {
       if (!stats.isDirectory()) return failed('NOT_A_DIRECTORY', 'The requested path is not a folder.')
       const entries = await fs.readdir(target.value, { withFileTypes: true })
       const visibleEntries: DirectoryEntry[] = []
+      let skippedUnsafeEntry = false
 
       for (const entry of entries) {
         const entryPath = resolve(target.value, entry.name)
         const resolvedEntry = await resolvePathWithinRoot(root.value, entryPath)
-        if (!resolvedEntry.ok) continue
-        if (entry.isDirectory()) visibleEntries.push({ name: entry.name, path: resolvedEntry.value, type: 'directory' })
-        if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
+        if (!resolvedEntry.ok) {
+          skippedUnsafeEntry = true
+          continue
+        }
+
+        const entryStats = await fs.stat(resolvedEntry.value)
+        if (entryStats.isDirectory()) visibleEntries.push({ name: entry.name, path: resolvedEntry.value, type: 'directory' })
+        if (entryStats.isFile() && entry.name.toLowerCase().endsWith('.md')) {
           visibleEntries.push({ name: entry.name, path: resolvedEntry.value, type: 'markdown' })
         }
       }
 
       visibleEntries.sort((left, right) => left.type.localeCompare(right.type) || left.name.localeCompare(right.name))
+      if (skippedUnsafeEntry) {
+        return failed('ACCESS_DENIED', 'Some folder entries were excluded because they resolve outside the selected root folder.')
+      }
       return succeeded(visibleEntries)
     } catch (error) {
       return errorResult(error, 'READ_FAILED', 'Unable to list the requested folder.')

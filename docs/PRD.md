@@ -4,7 +4,7 @@
 
 ### Current Implementation Status
 
-Phase 7 is complete. A `.md` file passed to the Electron process is realpath-validated and opened in an independent Browser Window. Its parent folder becomes that window's Root Folder, and the file is supplied through the preload IPC boundary as the initial active tab. The application does not enforce a single-instance lock, preserving independent Root and tab state for separately launched files.
+Phase 8 is complete. Markdown-file read failures are retained on the affected tab and shown without terminating the application. Explorer listing errors, including an unavailable Root Folder or access denial, are displayed in the Explorer. The main process continues to validate all IPC paths as absolute, Root-contained, real filesystem paths and rejects unsupported file types before reading.
 
 Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문서를 탐색하고, 여러 문서를 탭으로 열람할 수 있는 경량 Windows 데스크톱 애플리케이션이다.
 

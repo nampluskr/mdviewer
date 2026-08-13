@@ -4,7 +4,7 @@
 
 ### 1.1 Current Implementation Status
 
-Phase 7 is complete. The main process validates a Markdown launch argument with realpath and file checks, sets its real parent directory as the per-window Root Folder, and provides the initial document only through a one-time preload IPC call. The renderer initializes the Root, Explorer, and active first tab from that result. No single-instance lock is requested, so separately launched files retain independent Browser Window, Root, and tab state. Markdown rendering through react-markdown with remark-gfm and the existing Root-subtree boundary checks remain in place.
+Phase 8 is complete. File-read failures are stored on the affected tab so a deleted or inaccessible Markdown document shows a specific tab-level error without closing the application. Directory-list failures are presented in the Explorer and are also surfaced when the selected Root becomes unavailable. The main process maintains absolute-path, Root-containment, realpath, directory/file-type, and permission checks for all filesystem IPC operations. Invalid launch files, unsupported files, and Root-external paths return structured errors without exposing direct Node.js access to the renderer.
 
 Markdown Browser는 로컬 Markdown 문서를 읽기 위한 경량 Windows 데스크톱 애플리케이션이다.
 

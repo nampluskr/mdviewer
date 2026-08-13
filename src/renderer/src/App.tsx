@@ -8,6 +8,7 @@ interface Tab {
   filePath: string | null
   title: string
   content: string
+  error: string | null
 }
 
 interface DirectoryState {
@@ -65,11 +66,7 @@ function App(): ReactElement {
   const [initialLaunchPending, setInitialLaunchPending] = useState(true)
   const nextTabNumber = useRef(1)
   const fileLoadVersions = useRef(new Map<string, number>())
-  const activeTabIdRef = useRef<string | null>(activeTabId)
-
-  useEffect(() => {
-    activeTabIdRef.current = activeTabId
-  }, [activeTabId])
+  const directoryLoadVersions = useRef(new Map<string, number>())
 
   useEffect(() => {
     const loadInitialMarkdownFile = async (): Promise<void> => {
@@ -88,7 +85,7 @@ function App(): ReactElement {
         setExpandedPaths(new Set([initialFile.rootPath]))
         setDirectories({})
         setFileError(null)
-        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content }])
+        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content, error: null }])
         setActiveTabId('launch-0')
         await loadDirectory(initialFile.rootPath)
       } catch {
@@ -104,7 +101,7 @@ function App(): ReactElement {
   const createEmptyTab = (): void => {
     const id = `empty-${nextTabNumber.current}`
     nextTabNumber.current += 1
-    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '' }])
+    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '', error: null }])
     setFileError(null)
     setActiveTabId(id)
   }
@@ -130,17 +127,21 @@ function App(): ReactElement {
   const loadDirectory = async (directoryPath: string): Promise<void> => {
     if (!window.markdownBrowser) return
 
+    const loadVersion = (directoryLoadVersions.current.get(directoryPath) ?? 0) + 1
+    directoryLoadVersions.current.set(directoryPath, loadVersion)
     setDirectories((current) => ({
       ...current,
       [directoryPath]: { entries: current[directoryPath]?.entries ?? [], error: null, loading: true }
     }))
     const result = await window.markdownBrowser.listDirectory(directoryPath)
+    if (directoryLoadVersions.current.get(directoryPath) !== loadVersion) return
     setDirectories((current) => ({
       ...current,
       [directoryPath]: result.ok
         ? { entries: result.value, error: null, loading: false }
         : { entries: [], error: result.error.message, loading: false }
     }))
+    if (!result.ok && directoryPath === rootPath) setFolderError(result.error.message)
   }
 
   const selectRootFolder = async (): Promise<void> => {
@@ -192,13 +193,15 @@ function App(): ReactElement {
     const result = await window.markdownBrowser.readMarkdownFile(entry.path)
     if (fileLoadVersions.current.get(targetTabId) !== loadVersion) return
     if (!result.ok) {
-      if (activeTabIdRef.current === targetTabId) setFileError(result.error.message)
+      setTabs((currentTabs) => currentTabs.map((tab) => (
+        tab.id === targetTabId ? { ...tab, content: '', error: result.error.message } : tab
+      )))
       return
     }
 
     setTabs((currentTabs) => currentTabs.map((tab) => (
       tab.id === targetTabId
-        ? { ...tab, filePath: entry.path, title: entry.name, content: result.value.content }
+        ? { ...tab, filePath: entry.path, title: entry.name, content: result.value.content, error: null }
         : tab
     )))
   }
@@ -288,7 +291,7 @@ function App(): ReactElement {
         <div className="document-content">
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
           <h1>{activeTab?.title}</h1>
-          {activeTab?.filePath ? (
+          {activeTab?.error ? <p className="document-error" role="alert">{activeTab.error}</p> : activeTab?.filePath ? (
             activeTab.content.trim().length > 0 ? (
               <article className="markdown-content">
                 <MarkdownErrorBoundary>

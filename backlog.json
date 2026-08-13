@@ -176,7 +176,7 @@
       "id": "phase-08",
       "order": 8,
       "title": "오류 처리와 검증",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-07"],
       "scope": [
         "열린 파일 삭제, 권한 오류, 유효하지 않은 Root Folder 상태 처리",
