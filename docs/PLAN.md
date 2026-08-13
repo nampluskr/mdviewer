@@ -164,7 +164,7 @@ Markdown과 GitHub Flavored Markdown 문서를 읽기 쉬운 화면으로 렌더
 - GFM 표와 체크박스를 렌더링할 수 있다.
 - 일반 문서에서 가로·세로 스크롤과 텍스트 가독성이 유지된다.
 
-## Phase 7. Windows 실행 연동
+## Phase 7. Windows 실행 연동 (구현 완료, 커밋 및 푸시 승인 대기)
 
 ### 목표
 

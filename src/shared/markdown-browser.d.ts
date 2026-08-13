@@ -30,11 +30,19 @@ interface DirectoryEntry {
   type: 'directory' | 'markdown'
 }
 
+interface InitialMarkdownFile {
+  rootPath: string
+  filePath: string
+  name: string
+  content: string
+}
+
 interface MarkdownBrowserApi {
   platform: NodeJS.Platform
   selectRootFolder: () => Promise<FileSystemResult<{ rootPath: string }>>
   listDirectory: (directoryPath?: string) => Promise<FileSystemResult<DirectoryEntry[]>>
   readMarkdownFile: (filePath: string) => Promise<FileSystemResult<{ content: string }>>
+  consumeInitialMarkdownFile: () => Promise<FileSystemResult<InitialMarkdownFile | null>>
 }
 
 interface Window {

@@ -61,6 +61,8 @@ function App(): ReactElement {
   const [directories, setDirectories] = useState<Record<string, DirectoryState>>({})
   const [folderError, setFolderError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
+  const [launchError, setLaunchError] = useState<string | null>(null)
+  const [initialLaunchPending, setInitialLaunchPending] = useState(true)
   const nextTabNumber = useRef(1)
   const fileLoadVersions = useRef(new Map<string, number>())
   const activeTabIdRef = useRef<string | null>(activeTabId)
@@ -68,6 +70,36 @@ function App(): ReactElement {
   useEffect(() => {
     activeTabIdRef.current = activeTabId
   }, [activeTabId])
+
+  useEffect(() => {
+    const loadInitialMarkdownFile = async (): Promise<void> => {
+      if (!window.markdownBrowser) return
+
+      try {
+        const result = await window.markdownBrowser.consumeInitialMarkdownFile()
+        if (!result.ok) {
+          setLaunchError(result.error.message)
+          return
+        }
+        if (!result.value) return
+
+        const initialFile = result.value
+        setRootPath(initialFile.rootPath)
+        setExpandedPaths(new Set([initialFile.rootPath]))
+        setDirectories({})
+        setFileError(null)
+        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content }])
+        setActiveTabId('launch-0')
+        await loadDirectory(initialFile.rootPath)
+      } catch {
+        setLaunchError('Unable to initialize the requested Markdown file.')
+      } finally {
+        setInitialLaunchPending(false)
+      }
+    }
+
+    void loadInitialMarkdownFile()
+  }, [])
 
   const createEmptyTab = (): void => {
     const id = `empty-${nextTabNumber.current}`
@@ -217,6 +249,8 @@ function App(): ReactElement {
   if (tabs.length === 0) {
     return (
       <main className="empty-state">
+        {initialLaunchPending ? <p className="document-status">Opening Markdown file...</p> : null}
+        {launchError ? <p className="document-error" role="alert">{launchError}</p> : null}
         <button className="new-tab-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">+</button>
       </main>
     )

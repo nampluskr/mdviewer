@@ -4,7 +4,7 @@
 
 ### 1.1 Current Implementation Status
 
-Phase 6 is complete. The main process owns the selected Root Folder for each window, and exposes folder selection, Root-subtree directory listing, and Markdown reading only through the preload IPC API. The renderer provides Root Folder selection, a collapsible Explorer tree, Explorer visibility control, multi-tab document loading, and Markdown rendering through react-markdown with remark-gfm. Typography and overflow styles keep code blocks, tables, and long documents readable; empty Markdown files show a dedicated status. Absolute-path, cross-volume, and symbolic-link boundary checks prevent Root-external access. The renderer initializes with no tabs and no active tab, creates an active empty tab from the plus button, and restores that empty state after the last tab closes.
+Phase 7 is complete. The main process validates a Markdown launch argument with realpath and file checks, sets its real parent directory as the per-window Root Folder, and provides the initial document only through a one-time preload IPC call. The renderer initializes the Root, Explorer, and active first tab from that result. No single-instance lock is requested, so separately launched files retain independent Browser Window, Root, and tab state. Markdown rendering through react-markdown with remark-gfm and the existing Root-subtree boundary checks remain in place.
 
 Markdown Browser는 로컬 Markdown 문서를 읽기 위한 경량 Windows 데스크톱 애플리케이션이다.
 

@@ -157,7 +157,7 @@
       "id": "phase-07",
       "order": 7,
       "title": "Windows 실행 연동",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-06"],
       "scope": [
         "실행 인자로 전달된 Markdown 파일 경로 처리",

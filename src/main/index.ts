@@ -1,7 +1,7 @@
 import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
 import type { OpenDialogOptions } from 'electron'
 import { promises as fs } from 'node:fs'
-import { isAbsolute, join, relative, resolve, sep } from 'node:path'
+import { dirname, isAbsolute, join, relative, resolve, sep } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 
 function escapeHtml(value: string): string {
@@ -49,7 +49,15 @@ interface DirectoryEntry {
   type: 'directory' | 'markdown'
 }
 
+interface InitialMarkdownFile {
+  rootPath: string
+  filePath: string
+  name: string
+  content: string
+}
+
 const windowRoots = new Map<number, string>()
+const initialMarkdownFiles = new Map<number, FileSystemResult<InitialMarkdownFile | null>>()
 
 function succeeded<T>(value: T): FileSystemResult<T> {
   return { ok: true, value }
@@ -104,6 +112,29 @@ async function resolvePathWithinRoot(rootPath: string, requestedPath: string): P
 function rootForSender(senderId: number): FileSystemResult<string> {
   const rootPath = windowRoots.get(senderId)
   return rootPath ? succeeded(rootPath) : failed('NO_ROOT_SELECTED', 'Select a root folder before accessing files.')
+}
+
+async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<InitialMarkdownFile | null>> {
+  const fileArgument = process.argv.slice(1).find((argument) => argument.toLowerCase().endsWith('.md'))
+  if (!fileArgument) return succeeded(null)
+
+  try {
+    const filePath = await fs.realpath(resolve(fileArgument))
+    const stats = await fs.stat(filePath)
+    if (!stats.isFile() || !filePath.toLowerCase().endsWith('.md')) {
+      return failed('NOT_A_MARKDOWN_FILE', 'The launch argument is not a Markdown file.')
+    }
+
+    const rootPath = await fs.realpath(dirname(filePath))
+    return succeeded({
+      rootPath,
+      filePath,
+      name: filePath.split(/[\\/]/).filter(Boolean).pop() ?? filePath,
+      content: await fs.readFile(filePath, 'utf8')
+    })
+  } catch (error) {
+    return errorResult(error, 'READ_FAILED', 'Unable to open the requested Markdown file.')
+  }
 }
 
 function registerFileSystemHandlers(): void {
@@ -170,6 +201,12 @@ function registerFileSystemHandlers(): void {
       return errorResult(error, 'READ_FAILED', 'Unable to read the requested Markdown file.')
     }
   })
+
+  ipcMain.handle('filesystem:consume-initial-markdown-file', (event): FileSystemResult<InitialMarkdownFile | null> => {
+    const initialFile = initialMarkdownFiles.get(event.sender.id) ?? succeeded(null)
+    initialMarkdownFiles.delete(event.sender.id)
+    return initialFile
+  })
 }
 
 async function loadWindowContent(window: BrowserWindow): Promise<void> {
@@ -190,7 +227,7 @@ async function loadWindowContent(window: BrowserWindow): Promise<void> {
   }
 }
 
-function createWindow(): BrowserWindow {
+function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFile | null> = succeeded(null)): BrowserWindow {
   const window = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -207,8 +244,17 @@ function createWindow(): BrowserWindow {
   })
 
   const webContentsId = window.webContents.id
+  if (initialMarkdownResult.ok && initialMarkdownResult.value) {
+    windowRoots.set(webContentsId, initialMarkdownResult.value.rootPath)
+  }
+  if (!initialMarkdownResult.ok || initialMarkdownResult.value) {
+    initialMarkdownFiles.set(webContentsId, initialMarkdownResult)
+  }
   window.once('ready-to-show', () => window.show())
-  window.on('closed', () => windowRoots.delete(webContentsId))
+  window.on('closed', () => {
+    windowRoots.delete(webContentsId)
+    initialMarkdownFiles.delete(webContentsId)
+  })
   window.webContents.setWindowOpenHandler(({ url }) => {
     try {
       const destination = new URL(url)
@@ -227,10 +273,11 @@ function createWindow(): BrowserWindow {
   return window
 }
 
-app.whenReady().then(() => {
+app.whenReady().then(async () => {
   configureContentSecurityPolicy()
   registerFileSystemHandlers()
-  createWindow()
+  const initialFileResult = await initialMarkdownFileFromArguments()
+  createWindow(initialFileResult)
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow()

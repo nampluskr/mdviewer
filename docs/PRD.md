@@ -4,7 +4,7 @@
 
 ### Current Implementation Status
 
-Phase 6 is complete. The renderer renders Markdown with react-markdown and remark-gfm, including GFM tables, task lists, strikethrough, blockquotes, links, and code blocks. Readable typography, scrolling code blocks and tables, and an empty Markdown-file state are included. The system folder picker, Root-subtree directory and Markdown-file listing, and Markdown content reading remain available only through the preload and IPC boundary.
+Phase 7 is complete. A `.md` file passed to the Electron process is realpath-validated and opened in an independent Browser Window. Its parent folder becomes that window's Root Folder, and the file is supplied through the preload IPC boundary as the initial active tab. The application does not enforce a single-instance lock, preserving independent Root and tab state for separately launched files.
 
 Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문서를 탐색하고, 여러 문서를 탭으로 열람할 수 있는 경량 Windows 데스크톱 애플리케이션이다.
 
