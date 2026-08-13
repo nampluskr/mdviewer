@@ -139,7 +139,7 @@
       "id": "phase-06",
       "order": 6,
       "title": "Markdown 렌더링",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-05"],
       "scope": [
         "react-markdown과 remark-gfm 적용",

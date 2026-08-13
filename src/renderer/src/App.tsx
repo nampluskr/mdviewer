@@ -1,5 +1,7 @@
-import { useRef, useState } from 'react'
-import type { ReactElement } from 'react'
+import { Component, useEffect, useRef, useState } from 'react'
+import type { ErrorInfo, ReactElement, ReactNode } from 'react'
+import ReactMarkdown from 'react-markdown'
+import remarkGfm from 'remark-gfm'
 
 interface Tab {
   id: string
@@ -12,6 +14,37 @@ interface DirectoryState {
   entries: DirectoryEntry[]
   error: string | null
   loading: boolean
+}
+
+interface MarkdownErrorBoundaryProps {
+  children: ReactNode
+}
+
+interface MarkdownErrorBoundaryState {
+  hasError: boolean
+}
+
+class MarkdownErrorBoundary extends Component<MarkdownErrorBoundaryProps, MarkdownErrorBoundaryState> {
+  state: MarkdownErrorBoundaryState = { hasError: false }
+
+  static getDerivedStateFromError(): MarkdownErrorBoundaryState {
+    return { hasError: true }
+  }
+
+  componentDidUpdate(previousProps: MarkdownErrorBoundaryProps): void {
+    if (previousProps.children !== this.props.children && this.state.hasError) {
+      this.setState({ hasError: false })
+    }
+  }
+
+  componentDidCatch(_error: Error, _errorInfo: ErrorInfo): void {
+    // Keep renderer failures isolated to the active Markdown document.
+  }
+
+  render(): ReactNode {
+    if (this.state.hasError) return <p className="document-error" role="alert">Unable to render this Markdown file.</p>
+    return this.props.children
+  }
 }
 
 function fileName(path: string): string {
@@ -30,6 +63,11 @@ function App(): ReactElement {
   const [fileError, setFileError] = useState<string | null>(null)
   const nextTabNumber = useRef(1)
   const fileLoadVersions = useRef(new Map<string, number>())
+  const activeTabIdRef = useRef<string | null>(activeTabId)
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId
+  }, [activeTabId])
 
   const createEmptyTab = (): void => {
     const id = `empty-${nextTabNumber.current}`
@@ -122,7 +160,7 @@ function App(): ReactElement {
     const result = await window.markdownBrowser.readMarkdownFile(entry.path)
     if (fileLoadVersions.current.get(targetTabId) !== loadVersion) return
     if (!result.ok) {
-      setFileError(result.error.message)
+      if (activeTabIdRef.current === targetTabId) setFileError(result.error.message)
       return
     }
 
@@ -216,7 +254,15 @@ function App(): ReactElement {
         <div className="document-content">
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
           <h1>{activeTab?.title}</h1>
-          {activeTab?.filePath ? <pre className="markdown-source">{activeTab.content}</pre> : <p>This tab is ready for a Markdown document.</p>}
+          {activeTab?.filePath ? (
+            activeTab.content.trim().length > 0 ? (
+              <article className="markdown-content">
+                <MarkdownErrorBoundary>
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>{activeTab.content}</ReactMarkdown>
+                </MarkdownErrorBoundary>
+              </article>
+            ) : <p className="document-status">This Markdown file is empty.</p>
+          ) : <p className="document-status">This tab is ready for a Markdown document.</p>}
         </div>
       </section>
     </main>
