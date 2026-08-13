@@ -4,7 +4,7 @@
 
 | Phase | 제목 | 내용 |
 |---|---|---|
-| 0 | 환경 구성과 Git 초기화 | 개발에 필요한 Node.js, npm, Git, Python 보조 도구를 확인하고 프로젝트 Git 저장소와 기본 `.gitignore`를 초기화한다. |
+| 0 | 환경 구성과 Git 초기화 | 개발에 필요한 Node.js, npm, Git, Python 보조 도구를 확인하고 프로젝트 Git 저장소와 기본 `.gitignore`, 외부 사용자를 위한 README를 준비한다. |
 | 1 | 프로젝트 기반 구성 | Electron, React, TypeScript, Vite 기반 프로젝트를 구성하고 main·preload·renderer 프로세스의 기본 경계를 설정한다. |
 | 2 | 보안 파일 시스템 API | preload와 IPC를 통해 Root Folder 선택, 폴더 탐색, Markdown 파일 읽기 API를 구현한다. Root 외부 접근을 검증한다. |
 | 3 | 애플리케이션 상태와 빈 화면 | Root, Explorer 표시 여부, 탭 목록, 활성 탭 상태를 구성한다. 무인자 실행 및 마지막 탭 종료 시 `+` 버튼만 보이는 빈 화면을 구현한다. |
@@ -28,6 +28,7 @@
 - 프로젝트 루트에서 Git 저장소 초기화
 - GitHub 원격 저장소 `https://github.com/nampluskr/mdviewer.git` 등록
 - Electron 및 Node.js 산출물에 적합한 기본 `.gitignore` 구성
+- 외부 사용자를 위한 간략한 `README.md` 작성
 - 초기 문서와 설정을 기준으로 첫 커밋 준비
 - 사용자 요청으로 구현 또는 프로젝트 내용이 변경될 때의 문서 갱신 순서 정의
 
@@ -38,6 +39,7 @@
 - 프로젝트 루트가 Git 저장소로 초기화되어 있다.
 - `origin` 원격 저장소가 `https://github.com/nampluskr/mdviewer.git`을 가리킨다.
 - 불필요한 의존성 및 빌드 산출물이 Git 추적 대상에서 제외된다.
+- `README.md`가 프로젝트 목적, 현재 구현 상태, 계획된 주요 기능을 간략히 안내한다.
 - 이후 Phase별 커밋과 푸시를 수행할 수 있는 상태다.
 - 요구사항 변경 시 `PLAN.md → backlog.json → PRD.md → SPEC.md` 순서로 문서를 갱신한다.
 

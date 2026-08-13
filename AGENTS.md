@@ -32,13 +32,14 @@ Claude Opus를 사용할 수 없는 환경이면 그 사실과 사유를 사용�
 - 메인 에이전트는 Phase 구현을 끝낸 뒤, Claude 검증만 담당하는 별도 서브 에이전트를 실행한다.
 - 서브 에이전트는 작업 폴더를 기준으로 Claude CLI를 읽기 전용 모드로 실행한다.
 - 서브 에이전트는 현재 Phase, 변경 파일, 관련 PRD·SPEC 완료 기준을 프롬프트에 포함하고, 심각도 순서의 지적사항과 근거를 반환한다.
+- Claude 검토는 현재 작업 폴더의 지정된 변경 파일과 관련 요구사항 문서만 대상으로 한다. Git 상태·브랜치·원격 저장소·커밋 이력 조회와 Bash, PowerShell 등 셸 도구 호출을 요청하거나 허용하지 않는다.
 - Claude의 지적사항은 메인 에이전트가 검토한다. 유효한 지적사항은 수정 및 재검증하고, 유효하지 않은 지적사항은 근거와 함께 사용자 보고에 남긴다.
 - Claude CLI의 응답 지연, 인증 실패, 네트워크 오류 등으로 검증하지 못하면 서브 에이전트는 오류 내용과 대체 검증안을 메인 에이전트에 반환한다.
 
 서브 에이전트가 PowerShell에서 실행할 기본 명령은 다음과 같다. `<phase>`, `<changed-files>`, `<acceptance-criteria>`는 현재 작업 내용으로 대체한다.
 
 ```powershell
-claude -p "You are an adversarial reviewer for <phase>. Review the changed files: <changed-files>. Validate against: <acceptance-criteria>. Identify requirement gaps, security-boundary violations, error-handling defects, regressions, and missing tests. Return findings ordered by severity with concrete evidence. Do not modify files." --model opus --allowedTools "Read,Glob,Grep" --disallowedTools "Edit,Write" --max-turns 5 --output-format json
+claude -p "You are an adversarial reviewer for <phase>. Review only these files in the current working folder: <changed-files>. Validate against: <acceptance-criteria>. Do not inspect Git status, branches, remotes, commit history, or use Bash, PowerShell, or any shell tool. Identify requirement gaps, security-boundary violations, error-handling defects, regressions, and missing tests. Return findings ordered by severity with concrete evidence. Do not modify files." --model opus --allowedTools "Read,Glob,Grep" --disallowedTools "Edit,Write" --max-turns 5 --output-format json
 ```
 
 이 명령은 `Read`, `Glob`, `Grep`만 허용하며 파일 변경 도구를 금지한다. 메인 에이전트는 Claude 검증 결과를 받은 후에만 수정, 재검증, 사용자 승인 요청 단계로 진행한다.

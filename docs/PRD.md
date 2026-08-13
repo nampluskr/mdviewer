@@ -58,6 +58,7 @@ Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문
 | NFR-12 | Packaging | 일반 사용자가 실행 가능한 Windows 애플리케이션으로 패키징 가능해야 한다 | Must |
 | NFR-13 | Readability | 코드 블록, 표, 제목, 목록 등 Markdown 요소가 명확하게 구분되어야 한다 | Must |
 | NFR-14 | Extensibility | 향후 Mermaid, KaTeX, 검색 등을 추가할 수 있는 구조를 유지한다 | Should |
+| NFR-15 | Documentation | 저장소의 README는 프로젝트 목적, 현재 구현 상태, 계획된 주요 기능을 외부 사용자가 이해할 수 있도록 간략히 안내한다 | Must |
 
 ---
 

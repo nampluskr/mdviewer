@@ -27,6 +27,7 @@
         "프로젝트 루트에서 Git 저장소 초기화",
         "GitHub 원격 저장소 https://github.com/nampluskr/mdviewer.git 등록",
         "Electron 및 Node.js 산출물에 적합한 기본 .gitignore 구성",
+        "외부 사용자를 위한 간략한 README.md 작성",
         "초기 문서와 설정을 기준으로 첫 커밋 준비"
       ],
       "acceptanceCriteria": [
@@ -35,6 +36,7 @@
         "프로젝트 루트가 Git 저장소로 초기화되어 있다.",
         "origin 원격 저장소가 https://github.com/nampluskr/mdviewer.git을 가리킨다.",
         "불필요한 의존성 및 빌드 산출물이 Git 추적 대상에서 제외된다.",
+        "README.md가 프로젝트 목적, 현재 구현 상태, 계획된 주요 기능을 간략히 안내한다.",
         "이후 Phase별 커밋과 푸시를 수행할 수 있는 상태다."
       ]
     },

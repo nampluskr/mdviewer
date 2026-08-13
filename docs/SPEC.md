@@ -8,6 +8,14 @@ Markdown Browser는 로컬 Markdown 문서를 읽기 위한 경량 Windows 데�
 
 하나의 Browser Window는 하나의 Root Folder를 담당하며, 서로 다른 Browser Window는 독립적으로 동작한다.
 
+### 1.1 Repository README
+
+저장소 루트의 `README.md`는 외부 사용자를 위한 프로젝트 안내 문서다. README에는 다음을 간략히 포함한다.
+
+- Markdown Browser의 목적
+- 현재 구현 상태
+- 계획된 주요 기능
+
 ---
 
 ## 2. Application Model
