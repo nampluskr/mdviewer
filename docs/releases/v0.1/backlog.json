@@ -6,14 +6,33 @@
   "changeManagementPolicy": "When a user request changes the implementation or project content, update the affected release documents in this exact order: PLAN.md, backlog.json, PRD.md, then SPEC.md.",
   "phaseStatusPolicy": "Phase completion is recorded only in each phase's status field. Do not duplicate phase status in README.md, PLAN.md, PRD.md, or SPEC.md.",
   "implementationLanguagePolicy": "Product functionality must be implemented in TypeScript. Python is not used for Electron or React application features and may only be used for optional development tooling such as test-data generation or verification automation.",
+  "adversarialReviewPolicy": {
+    "reviewerSelection": "The opposite vendor of the phase's last substantive implementer reviews the phase: Claude Sonnet headless CLI after Codex, Codex CLI gpt-5.6-sol after Claude Code. Re-evaluate this choice when token limits require an implementation handoff.",
+    "allowedContext": "Only the listed product source files, adversarialFocus, and specRefs. Do not provide implementation-session context, documents, configuration, test artifacts, Git metadata, or shell access.",
+    "record": "Write docs/releases/v0.1/reviews/A{n}.md with implementer, reviewer, timestamp, files, severity counts, reproduction conditions, SPEC clauses, and disposition.",
+    "criticalPolicy": "Fix every valid Critical finding, rerun relevant verification, then rerun the same opposite-vendor review. Major and Minor findings require a recorded disposition.",
+    "fallback": "If the required reviewer is unavailable, report the error and alternative validation method to the user and obtain approval before omitting it."
+  },
+  "phaseReviewProfiles": {
+    "phase-00": {"reviewId": "A0", "mandatory": false, "adversarialFocus": ["development environment reproducibility", "repository initialization and ignore rules"], "specRefs": ["SPEC §1.2", "SPEC §13"]},
+    "phase-01": {"reviewId": "A1", "mandatory": false, "adversarialFocus": ["Renderer, preload, and main-process separation", "Electron security defaults and build entry points"], "specRefs": ["PRD NFR-06–NFR-08", "PRD CON-13", "SPEC §10", "SPEC §13"]},
+    "phase-02": {"reviewId": "A2", "mandatory": true, "adversarialFocus": ["Root boundary bypass including symbolic links", "untrusted IPC path input", "permission and missing-file error handling"], "specRefs": ["PRD FR-01–FR-04", "PRD CON-09", "SPEC §2.3", "SPEC §10", "SPEC §11"]},
+    "phase-03": {"reviewId": "A3", "mandatory": false, "adversarialFocus": ["empty state invariants", "last-tab close behavior", "per-window state isolation"], "specRefs": ["PRD FR-07–FR-09a", "SPEC §2.1", "SPEC §5.1–§5.4", "SPEC §9"]},
+    "phase-04": {"reviewId": "A4", "mandatory": false, "adversarialFocus": ["tree traversal outside Root", "folder expansion state", "active-tab document replacement"], "specRefs": ["PRD FR-03–FR-06", "PRD FR-10", "SPEC §2.3", "SPEC §4", "SPEC §5.6"]},
+    "phase-05": {"reviewId": "A5", "mandatory": false, "adversarialFocus": ["duplicate document tabs", "active-tab selection after close", "empty-tab document binding"], "specRefs": ["PRD FR-07–FR-12", "SPEC §5"]},
+    "phase-06": {"reviewId": "A6", "mandatory": false, "adversarialFocus": ["untrusted Markdown rendering", "GFM coverage and failure states", "long-document readability"], "specRefs": ["PRD FR-13–FR-14", "PRD NFR-13", "SPEC §7"]},
+    "phase-07": {"reviewId": "A7", "mandatory": true, "adversarialFocus": ["untrusted launch arguments", "direct-launch Root calculation", "independent-window state isolation"], "specRefs": ["PRD FR-15–FR-19", "PRD CON-11–CON-12", "SPEC §2.2", "SPEC §6"]},
+    "phase-08": {"reviewId": "A8", "mandatory": true, "adversarialFocus": ["deleted-file, permission, and invalid-Root handling", "IPC and Root-boundary regression", "unsupported-file handling"], "specRefs": ["PRD FR-03", "PRD NFR-06–NFR-07", "SPEC §10", "SPEC §11"]},
+    "phase-09": {"reviewId": "A9", "mandatory": false, "adversarialFocus": ["Windows installer and file association", "direct-launch behavior after installation"], "specRefs": ["PRD FR-15–FR-16", "PRD NFR-11–NFR-12", "SPEC §6.1"]}
+  },
   "phaseCompletionWorkflow": [
     "Implement the phase scope and verify its acceptance criteria.",
-    "Request an adversarial cross-validation from Claude Opus, focused on requirement gaps, security, error handling, regressions, and missing tests.",
-    "Fix all valid findings and rerun relevant verification.",
+    "Request adversarial cross-validation from the opposite vendor of the last substantive implementer, using the phase adversarialFocus and specRefs only.",
+    "Fix all valid Critical findings, rerun relevant verification, and rerun the same cross-vendor review after Critical fixes.",
     "Report the changes, verification results, and remaining risks to the user, then request approval.",
     "Only after user approval, commit the completed phase and push it to the remote repository."
   ],
-  "reviewFallback": "If Claude Opus is unavailable, report the reason, propose an alternative validation method, and request user approval before proceeding.",
+  "reviewFallback": "If the required opposite-vendor CLI is unavailable, report the reason, propose an alternative validation method, and request user approval before proceeding.",
   "commitPolicy": "One approved completed phase per commit; do not commit or push before user approval.",
   "phases": [
     {

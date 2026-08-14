@@ -59,6 +59,7 @@ Markdown Browser는 선택한 로컬 폴더와 그 하위 폴더의 Markdown 문
 | NFR-13 | Readability | 코드 블록, 표, 제목, 목록 등 Markdown 요소가 명확하게 구분되어야 한다 | Must |
 | NFR-14 | Extensibility | 향후 Mermaid, KaTeX, 검색 등을 추가할 수 있는 구조를 유지한다 | Should |
 | NFR-15 | Documentation | 저장소의 README는 프로젝트 목적, 현재 구현 상태, 계획된 주요 기능을 외부 사용자가 이해할 수 있도록 간략히 안내한다 | Must |
+| NFR-16 | Verification | 구현 Phase는 마지막 실질 구현자의 반대 벤더 CLI로 적대적 검증하며, 검토 결과와 처리 상태를 기록한다 | Must |
 
 ---
 

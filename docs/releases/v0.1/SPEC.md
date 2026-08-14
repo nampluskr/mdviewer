@@ -478,7 +478,15 @@ v0.1에서는 다음 기능을 우선 구현한다.
 
 ---
 
-## 15. Change Management
+## 15. Cross-vendor Adversarial Verification
+
+각 구현 Phase는 마지막 실질 구현자의 반대 벤더가 읽기 전용으로 검토한다. Codex 구현은 Claude Sonnet headless CLI가, Claude Code 구현은 Codex CLI `gpt-5.6-sol`이 검토한다. 토큰 한도로 구현자가 바뀌면 마지막 실질 구현자를 기준으로 검토자를 다시 선택한다.
+
+검토 입력은 지정 제품 소스 파일, 해당 Phase의 `adversarialFocus`, `specRefs`로 제한한다. 구현 세션, 구현 근거, 문서, 설정, 테스트 산출물, Git 정보와 셸 도구를 검토에 제공하지 않는다. 검토자는 코드를 수정하지 않으며, 각 지적에 심각도, 재현 조건, 위반 SPEC 조항을 포함한다.
+
+검토 결과는 `docs/releases/v0.1/reviews/A{n}.md`에 기록한다. 유효한 Critical은 모두 수정·재검증하고, 같은 반대 벤더 검토를 다시 실행해 해소를 확인한다. Major와 Minor의 수용·보류·반박은 근거와 함께 기록한다. 필요한 검토 CLI를 사용할 수 없으면 사용자 승인 없이는 검토를 생략하지 않는다.
+
+## 16. Change Management
 
 사용자 요청으로 구현 또는 프로젝트 내용이 변경되면 영향받는 문서를 다음 순서로 갱신한다.
 
