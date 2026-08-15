@@ -48,7 +48,7 @@
 | FR-29 | 직접 실행 | Windows Explorer에서 `.md` 파일을 직접 열면 파일의 부모 폴더를 Root Folder와 Explorer의 현재 디렉터리로 설정하고 독립 Browser Window에서 연다. 직접 실행 파일에도 일반 파일 열기와 동일한 크기, 바이너리, 인코딩 검증을 적용한다. | Must |
 | FR-30 | 테마 | White와 Dark 모드를 제공하며 기본값은 White 모드이다. | Must |
 | FR-31 | 테마 | Explorer, 탭, 문서, 상태바, Markdown, 코드 블록, 코드 뷰어, 문법 하이라이트 토큰은 선택한 테마에 맞는 일관된 GitHub 계열 스타일을 적용한다. White는 GitHub Light 계열, Dark는 GitHub Dark 계열을 사용한다. | Must |
-| FR-32 | 테마 구현 | 앱 최상위 요소의 `data-theme="light"` 또는 `data-theme="dark"`와 CSS 사용자 정의 속성으로 테마를 전환한다. White와 Dark 화면을 별도로 만들지 않는다. | Must |
+| FR-32 | 테마 구현 | 앱 최상위 요소의 `data-theme="light"` 또는 `data-theme="dark"`와 CSS 사용자 정의 속성으로 테마를 전환한다. 문법 하이라이트 토큰을 포함한 색상은 테마별 CSS 사용자 정의 속성으로 정의하며, White와 Dark 화면을 별도로 만들지 않는다. | Must |
 | FR-33 | 집중 보기 | `F11`으로 창의 크기와 위치를 유지하는 집중 보기 모드를 전환한다. 운영체제 전체화면으로 전환하지 않는다. | Must |
 | FR-34 | 집중 보기 | 집중 보기에서는 프로그램 제목 영역, 탭 영역, Explorer, 상태바를 숨기고 문서 영역만 표시한다. `F11`을 다시 누르면 기존 화면 구성을 복원한다. | Must |
 | FR-35 | 집중 보기 | 집중 보기에서도 `Ctrl+Tab` 및 `Ctrl+Shift+Tab`으로 열린 문서를 전환할 수 있다. | Must |

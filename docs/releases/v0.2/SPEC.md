@@ -238,6 +238,8 @@ Markdown 이미지 URL이 상대 경로이고 허용 확장자에 해당하면 �
 
 앱 최상위 요소에 `data-theme="light"` 또는 `data-theme="dark"`를 설정한다. 색상은 CSS 사용자 정의 속성으로 정의하고, 테마별 별도 화면을 만들지 않는다.
 
+문법 하이라이트의 comment, string, number, keyword, property 토큰 색상도 테마별 CSS 사용자 정의 속성으로 정의한다.
+
 | 영역 | Light | Dark |
 |---|---|---|
 | Markdown, 코드 블록, 코드 뷰어 | GitHub Light 계열 | GitHub Dark 계열 |

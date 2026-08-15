@@ -226,7 +226,7 @@
       "id": "phase-06",
       "order": 6,
       "title": "테마·가독성·집중 보기",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-04", "phase-05"],
       "scope": [
         "data-theme와 CSS 사용자 정의 속성 기반 Light/Dark 테마",

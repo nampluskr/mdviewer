@@ -111,6 +111,9 @@ function App(): ReactElement {
   const [currentDirectoryPath, setCurrentDirectoryPath] = useState<string | null>(null)
   const [explorerVisible, setExplorerVisible] = useState(true)
   const [explorerWidth, setExplorerWidth] = useState(272)
+  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [contentFontScale, setContentFontScale] = useState(100)
+  const [focusMode, setFocusMode] = useState(false)
   const [resizingExplorer, setResizingExplorer] = useState(false)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
@@ -179,8 +182,18 @@ function App(): ReactElement {
     setFileError(null)
   }
 
+  const adjustContentFontScale = (amount: number): void => {
+    setContentFontScale((scale) => Math.min(200, Math.max(80, scale + amount)))
+  }
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'F11') {
+        event.preventDefault()
+        setResizingExplorer(false)
+        setFocusMode((enabled) => !enabled)
+        return
+      }
       if (!event.ctrlKey || event.altKey || event.metaKey) return
       if (event.key.toLowerCase() === 't') {
         event.preventDefault()
@@ -188,6 +201,15 @@ function App(): ReactElement {
       } else if (event.key === 'Tab') {
         event.preventDefault()
         switchTab(event.shiftKey ? -1 : 1)
+      } else if (event.key === '+' || event.key === '=') {
+        event.preventDefault()
+        adjustContentFontScale(10)
+      } else if (event.key === '-') {
+        event.preventDefault()
+        adjustContentFontScale(-10)
+      } else if (event.key === '0') {
+        event.preventDefault()
+        setContentFontScale(100)
       }
     }
 
@@ -385,6 +407,12 @@ function App(): ReactElement {
 
   const stopExplorerResize = (): void => setResizingExplorer(false)
 
+  const handleContentWheel = (event: React.WheelEvent<HTMLDivElement>): void => {
+    if (!event.ctrlKey) return
+    event.preventDefault()
+    adjustContentFontScale(event.deltaY < 0 ? 10 : -10)
+  }
+
   const adjustExplorerWidth = (amount: number): void => {
     const minimumWidth = 192
     const maximumWidth = Math.max(minimumWidth, Math.floor(window.innerWidth * 0.45))
@@ -419,7 +447,7 @@ function App(): ReactElement {
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
 
   return (
-    <main className={resizingExplorer ? 'app-shell is-resizing' : 'app-shell'}>
+    <main className={`${resizingExplorer ? 'app-shell is-resizing' : 'app-shell'}${focusMode ? ' is-focus-mode' : ''}`} data-theme={theme}>
       <header className="tab-bar" aria-label="Open documents">
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
@@ -433,6 +461,9 @@ function App(): ReactElement {
         </div>
         <button className="toolbar-button" type="button" onClick={() => setExplorerVisible((visible) => !visible)}>
           {explorerVisible ? 'Hide Explorer' : 'Show Explorer'}
+        </button>
+        <button className="toolbar-button" type="button" aria-pressed={theme === 'dark'} onClick={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}>
+          {theme === 'light' ? 'Dark theme' : 'Light theme'}
         </button>
         <button className="new-tab-button tab-add-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">+</button>
       </header>
@@ -480,7 +511,7 @@ function App(): ReactElement {
           <div className="explorer-resizer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" aria-valuemin={192} aria-valuemax={Math.floor(window.innerWidth * 0.45)} aria-valuenow={explorerWidth} tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); adjustExplorerWidth(event.key === 'ArrowLeft' ? -16 : 16) } }} onPointerDown={startExplorerResize} onPointerMove={resizeExplorer} onPointerUp={stopExplorerResize} onPointerCancel={stopExplorerResize} />
           </>
         ) : null}
-        <div className="document-content">
+        <div className="document-content" style={{ '--content-font-scale': contentFontScale } as React.CSSProperties} onWheel={handleContentWheel}>
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
           <h1>{activeTab?.title}</h1>
           {activeTab?.error ? <p className="document-error" role="alert">{activeTab.error}</p> : activeTab?.filePath ? (
