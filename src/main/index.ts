@@ -4,6 +4,8 @@ import { promises as fs } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 import { isWithinRoot } from './filesystem-boundary'
+import { classifySupportedFile, isSupportedImage } from './file-classification'
+import { decodeUtf8, MAX_TEXT_FILE_BYTES } from './text-file-content'
 
 function escapeHtml(value: string): string {
   return value.replace(/[&<>'"]/g, (character) => {
@@ -35,10 +37,15 @@ function configureContentSecurityPolicy(): void {
 
 type FileSystemErrorCode =
   | 'ACCESS_DENIED'
+  | 'BINARY_FILE'
+  | 'FILE_TOO_LARGE'
   | 'INVALID_PATH'
   | 'NOT_FOUND'
   | 'NOT_A_DIRECTORY'
-  | 'NOT_A_MARKDOWN_FILE'
+  | 'OUTSIDE_ROOT'
+  | 'ROOT_UNAVAILABLE'
+  | 'UNSUPPORTED_ENCODING'
+  | 'UNSUPPORTED_TYPE'
   | 'NO_ROOT_SELECTED'
   | 'READ_FAILED'
 
@@ -47,7 +54,8 @@ type FileSystemResult<T> = { ok: true; value: T } | { ok: false; error: { code: 
 interface DirectoryEntry {
   name: string
   path: string
-  type: 'directory' | 'markdown'
+  type: 'directory' | 'markdown' | 'text' | 'code'
+  language?: string | null
 }
 
 interface InitialMarkdownFile {
@@ -88,17 +96,55 @@ async function resolvePathWithinRoot(rootPath: string, requestedPath: string): P
 
   const absolutePath = resolve(requestedPath)
   if (!isWithinRoot(rootPath, absolutePath)) {
-    return failed('ACCESS_DENIED', 'The requested path is outside the selected root folder.')
+    return failed('OUTSIDE_ROOT', 'The requested path is outside the selected root folder.')
   }
 
   try {
+    const realRootPath = await fs.realpath(rootPath)
     const realPath = await fs.realpath(absolutePath)
-    if (!isWithinRoot(rootPath, realPath)) {
-      return failed('ACCESS_DENIED', 'The requested path resolves outside the selected root folder.')
+    if (!isWithinRoot(realRootPath, realPath)) {
+      return failed('OUTSIDE_ROOT', 'The requested path resolves outside the selected root folder.')
     }
     return succeeded(realPath)
   } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'ENOENT') {
+      try {
+        await fs.realpath(rootPath)
+      } catch {
+        return failed('ROOT_UNAVAILABLE', 'The selected root folder is unavailable.')
+      }
+    }
     return errorResult(error, 'INVALID_PATH', 'The requested path is invalid.')
+  }
+}
+
+async function resolveRelativePathWithinRoot(
+  rootPath: string,
+  baseFilePath: string,
+  relativePath: string,
+  expectedType: 'image' | 'markdown'
+): Promise<FileSystemResult<{ path: string }>> {
+  if (typeof relativePath !== 'string' || relativePath.length === 0 || isAbsolute(relativePath)) {
+    return failed('INVALID_PATH', 'A relative path is required.')
+  }
+  if (expectedType === 'image' ? !isSupportedImage(relativePath) : classifySupportedFile(relativePath)?.kind !== 'markdown') {
+    return failed('UNSUPPORTED_TYPE', 'The requested resource type is not supported.')
+  }
+
+  const baseFile = await resolvePathWithinRoot(rootPath, baseFilePath)
+  if (!baseFile.ok) return baseFile
+  const candidatePath = resolve(dirname(baseFile.value), relativePath)
+  if (!isWithinRoot(rootPath, candidatePath)) return failed('OUTSIDE_ROOT', 'The requested path is outside the selected root folder.')
+
+  try {
+    const realRootPath = await fs.realpath(rootPath)
+    const realPath = await fs.realpath(candidatePath)
+    if (!isWithinRoot(realRootPath, realPath)) return failed('OUTSIDE_ROOT', 'The requested path resolves outside the selected root folder.')
+    const stats = await fs.stat(realPath)
+    if (!stats.isFile()) return failed('UNSUPPORTED_TYPE', 'The requested resource is not a file.')
+    return succeeded({ path: realPath })
+  } catch (error) {
+    return errorResult(error, 'READ_FAILED', 'Unable to resolve the requested resource.')
   }
 }
 
@@ -115,15 +161,20 @@ async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<Init
     const filePath = await fs.realpath(resolve(fileArgument))
     const stats = await fs.stat(filePath)
     if (!stats.isFile() || !filePath.toLowerCase().endsWith('.md')) {
-      return failed('NOT_A_MARKDOWN_FILE', 'The launch argument is not a Markdown file.')
+      return failed('UNSUPPORTED_TYPE', 'The launch argument is not a Markdown file.')
     }
+    if (stats.size > MAX_TEXT_FILE_BYTES) {
+      return failed('FILE_TOO_LARGE', 'The requested file exceeds the 10 MiB size limit.')
+    }
+    const decoded = decodeUtf8(await fs.readFile(filePath))
+    if (!decoded.ok) return failed(decoded.code, decoded.message)
 
     const rootPath = await fs.realpath(dirname(filePath))
     return succeeded({
       rootPath,
       filePath,
       name: filePath.split(/[\\/]/).filter(Boolean).pop() ?? filePath,
-      content: await fs.readFile(filePath, 'utf8')
+      content: decoded.value
     })
   } catch (error) {
     return errorResult(error, 'READ_FAILED', 'Unable to open the requested Markdown file.')
@@ -188,14 +239,15 @@ function registerFileSystemHandlers(): void {
 
         const entryStats = await fs.stat(resolvedEntry.value)
         if (entryStats.isDirectory()) visibleEntries.push({ name: entry.name, path: resolvedEntry.value, type: 'directory' })
-        if (entryStats.isFile() && entry.name.toLowerCase().endsWith('.md')) {
-          visibleEntries.push({ name: entry.name, path: resolvedEntry.value, type: 'markdown' })
+        const fileType = classifySupportedFile(entry.name)
+        if (entryStats.isFile() && fileType) {
+          visibleEntries.push({ name: entry.name, path: resolvedEntry.value, type: fileType.kind, language: fileType.language })
         }
       }
 
       visibleEntries.sort((left, right) => left.type.localeCompare(right.type) || left.name.localeCompare(right.name))
       if (skippedUnsafeEntry) {
-        return failed('ACCESS_DENIED', 'Some folder entries were excluded because they resolve outside the selected root folder.')
+        return failed('OUTSIDE_ROOT', 'Some folder entries were excluded because they resolve outside the selected root folder.')
       }
       return succeeded(visibleEntries)
     } catch (error) {
@@ -203,20 +255,38 @@ function registerFileSystemHandlers(): void {
     }
   })
 
-  ipcMain.handle('filesystem:read-markdown-file', async (event, filePath: string): Promise<FileSystemResult<{ content: string }>> => {
+  ipcMain.handle('filesystem:read-file', async (event, filePath: string): Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null }>> => {
     const root = rootForSender(event.sender.id)
     if (!root.ok) return root
     const target = await resolvePathWithinRoot(root.value, filePath)
     if (!target.ok) return target
-    if (!target.value.toLowerCase().endsWith('.md')) return failed('NOT_A_MARKDOWN_FILE', 'Only Markdown files can be opened.')
+    const fileType = classifySupportedFile(target.value)
+    if (!fileType) return failed('UNSUPPORTED_TYPE', 'This file type is not supported.')
 
     try {
       const stats = await fs.stat(target.value)
-      if (!stats.isFile()) return failed('NOT_A_MARKDOWN_FILE', 'Only Markdown files can be opened.')
-      return succeeded({ content: await fs.readFile(target.value, 'utf8') })
+      if (!stats.isFile()) return failed('UNSUPPORTED_TYPE', 'Only supported files can be opened.')
+      if (stats.size > MAX_TEXT_FILE_BYTES) {
+        return failed('FILE_TOO_LARGE', 'The requested file exceeds the 10 MiB size limit.')
+      }
+      const decoded = decodeUtf8(await fs.readFile(target.value))
+      if (!decoded.ok) return failed(decoded.code, decoded.message)
+      return succeeded({ content: decoded.value, kind: fileType.kind, language: fileType.language })
     } catch (error) {
       return errorResult(error, 'READ_FAILED', 'Unable to read the requested Markdown file.')
     }
+  })
+
+  ipcMain.handle('filesystem:resolve-relative-resource', async (
+    event,
+    baseFilePath: string,
+    relativePath: string,
+    expectedType: 'image' | 'markdown'
+  ): Promise<FileSystemResult<{ path: string }>> => {
+    const root = rootForSender(event.sender.id)
+    if (!root.ok) return root
+    if (expectedType !== 'image' && expectedType !== 'markdown') return failed('INVALID_PATH', 'A valid resource type is required.')
+    return resolveRelativePathWithinRoot(root.value, baseFilePath, relativePath, expectedType)
   })
 
   ipcMain.handle('filesystem:consume-initial-markdown-file', (event): FileSystemResult<InitialMarkdownFile | null> => {

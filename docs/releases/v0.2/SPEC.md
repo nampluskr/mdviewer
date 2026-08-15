@@ -12,7 +12,7 @@ Markdown Browser v0.2는 Windows에서 Root Folder 내부의 Markdown, 텍스트
 | 파일 접근 경계 | React Renderer → preload → Electron IPC → main process → Node.js `fs` |
 | 기본 테마 | White (`data-theme="light"`) |
 | 파일 변경 반영 | 사용자 수동 Reload만 지원하며 자동 File Watching은 사용하지 않음 |
-| 텍스트·코드 파일 상한 | 기본 `10 MiB` (`10 × 1024 × 1024` bytes) |
+| 지원 파일 상한 | 기본 `10 MiB` (`10 × 1024 × 1024` bytes) |
 
 ## 2. 애플리케이션 상태
 
@@ -72,6 +72,8 @@ Open Folder를 성공적으로 완료했을 때 기존 탭 문서를 유지할�
 | main process | 경로 검증, 디렉터리 목록, 파일 읽기, 오류 분류 | 검증 전 파일 읽기, Root 밖 파일 반환 |
 
 `nodeIntegration`은 비활성화한다. IPC는 디렉터리 목록 조회, 파일 읽기, Folder Picker, 클립보드 복사에 필요한 최소 채널만 제공한다.
+
+파일 읽기 IPC는 지원 파일의 `content`, `kind`(`markdown`·`text`·`code`), `language`을 반환한다. 상대 리소스 IPC는 기준 Markdown 파일, 상대 경로, 기대 종류(`image` 또는 `markdown`)만 받고, 성공 시 검증된 기존 파일 경로만 반환한다.
 
 ### 3.3 오류 결과
 
@@ -168,6 +170,8 @@ Markdown 탭은 Markdown과 GFM으로 렌더링하고, 텍스트·코드 탭은 
 ### 5.3 직접 실행
 
 Windows Explorer에서 `.md` 파일을 직접 실행하면 새 Browser Window를 생성한다. 새 창은 다음 상태로 시작한다.
+
+직접 실행 파일은 Renderer에 전달하기 전에 일반 파일 읽기와 동일하게 `10 MiB` 상한, NUL byte 바이너리 징후, UTF-8 fatal decoding 검증을 통과해야 한다. 실패하면 새 창은 해당 구조화된 오류 상태로 시작한다.
 
 | 상태 | 값 |
 |---|---|

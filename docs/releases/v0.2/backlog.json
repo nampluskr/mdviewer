@@ -109,7 +109,7 @@
       "id": "phase-01",
       "order": 1,
       "title": "파일 접근 기반과 상태 확장",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": [],
       "scope": [
         "지원 확장자와 markdown, text, code, empty 탭 종류 정의",
@@ -124,6 +124,12 @@
         "지원 파일의 종류와 언어를 일관되게 판별할 수 있다.",
         "Root 밖, 대용량, 바이너리, 지원하지 않는 인코딩 요청을 구조화된 오류로 구분한다.",
         "창마다 Root와 UI 상태가 독립적으로 유지된다."
+      ],
+      "implementationNotes": [
+        "파일 읽기 응답은 content, kind, language을 포함한다.",
+        "지원 파일은 Markdown을 포함해 10 MiB 상한을 적용한다.",
+        "직접 실행 인자도 파일 읽기 API와 같은 크기, 바이너리, UTF-8 인코딩 검증을 적용한다.",
+        "상대 이미지와 Markdown 링크 검증은 기준 파일, 상대 경로, 기대 리소스 종류를 받는 제한된 preload API를 통해 수행한다."
       ]
     },
     {

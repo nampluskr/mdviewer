@@ -45,6 +45,8 @@ v0.2의 지원 파일과 상대 리소스를 안전하게 처리할 수 있도�
 - `rootPath`, `currentDirectoryPath`, `tabs`, `activeTabId`, `explorerVisible`, `explorerWidth`, `focusMode`, `contentFontScale`의 창별 상태 모델 확장
 - Renderer, preload, main process의 최소 권한 경계 유지
 
+파일 읽기 응답은 내용과 함께 `kind`, `language`을 반환하고, 지원 파일과 직접 실행 인자는 종류와 관계없이 `10 MiB` 상한 및 바이너리·인코딩 검증을 적용한다. 상대 리소스는 기준 Markdown 파일과 상대 경로를 받은 제한된 API로만 검증한다.
+
 ### 완료 기준
 
 - Renderer는 preload가 공개한 API로만 파일과 클립보드 기능을 요청한다.

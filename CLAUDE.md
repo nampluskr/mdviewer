@@ -31,7 +31,7 @@ Claude Code가 이 저장소에서 작업할 때 매 턴 지켜야 하는 규칙
 
 1. 해당 Phase의 `scope`, `acceptanceCriteria`, `selfVerification`을 구현·검증한다.
 2. 마지막 실질 구현자의 **반대 벤더 CLI**에 적대적 검증을 위임한다. Codex 구현은 Claude Sonnet headless CLI가, Claude Code 구현은 Codex CLI가 검토한다. 토큰 한도로 구현자가 Phase 중간에 바뀌면 마지막 실질 구현자를 기준으로 다시 정한다.
-3. Critical 지적은 모두 수정하고 관련 검증을 재실행한다. Major와 Minor는 처리 여부와 근거를 기록한다. Critical을 수정했다면 같은 반대 벤더 검토를 한 번 더 실행해 해소를 확인한다.
+3. Critical 지적은 모두 수정하고 관련 검증을 재실행한다. Major와 Minor는 처리 여부와 근거를 기록한다. Critical을 수정했다면 같은 반대 벤더 검토를 한 번 더 실행해 해소를 확인한다. Phase별 적대적 검증 실행은 실패·재실행을 포함해 최대 3회로 제한하며, 3회 이후에는 추가 실행 대신 마지막 결과와 남은 위험을 기록한다.
 4. `docs/releases/v0.1/reviews/A{n}.md`에 구현자, 검토 모델, 대상 파일, 실행 일시, 심각도별 건수, 지적·재현 조건·관련 SPEC 조항·처리 상태를 기록한다. 유효하지 않은 지적의 반박 근거도 기록한다.
 5. 변경 내용, 검증 결과, 검토 결과와 남은 위험을 사용자에게 보고하고 커밋·푸시 승인을 요청한다. 승인 전에는 커밋 또는 푸시하지 않는다.
 
@@ -41,6 +41,7 @@ Claude Code가 이 저장소에서 작업할 때 매 턴 지켜야 하는 규칙
 
 - 검토자는 제품 소스 파일, 해당 Phase의 `adversarialFocus`, `specRefs`만 사용한다. 구현 세션 대화, 구현 판단 근거, 문서, 설정, 테스트 산출물, Git 상태·이력·원격 저장소, 셸 도구는 요청하거나 사용하지 않는다.
 - 검토자는 파일을 수정하지 않는다. 지적은 `Critical / Major / Minor`, 정확한 재현 조건, 위반한 SPEC 조항을 포함해 심각도순으로 반환한다.
+- 실패·재실행을 포함한 Phase별 적대적 검증 실행은 최대 3회다.
 - Claude Sonnet 검토는 `claude -p`에 `--model sonnet --safe-mode --allowedTools "Read,Glob,Grep" --disallowedTools "Edit,Write,Bash" --permission-mode dontAsk --max-turns 5 --output-format json --no-session-persistence`를 사용한다. 필요하면 `--max-budget-usd`로 호출별 비용 상한을 둔다.
 - Codex 검토는 `codex.cmd exec --model gpt-5.6-sol --sandbox read-only --cd "D:\projects\tools\mdviewer"`를 사용한다. 모델 접근이 거부되면 기본 모델로 조용히 폴백하지 않고 오류와 대체안을 보고한다.
 

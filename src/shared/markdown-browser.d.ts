@@ -1,11 +1,16 @@
 type FileSystemErrorCode =
   | 'ACCESS_DENIED'
+  | 'BINARY_FILE'
+  | 'FILE_TOO_LARGE'
   | 'INVALID_PATH'
   | 'NOT_FOUND'
   | 'NOT_A_DIRECTORY'
-  | 'NOT_A_MARKDOWN_FILE'
   | 'NO_ROOT_SELECTED'
   | 'READ_FAILED'
+  | 'OUTSIDE_ROOT'
+  | 'ROOT_UNAVAILABLE'
+  | 'UNSUPPORTED_ENCODING'
+  | 'UNSUPPORTED_TYPE'
 
 interface FileSystemError {
   code: FileSystemErrorCode
@@ -27,7 +32,8 @@ type FileSystemResult<T> = FileSystemSuccess<T> | FileSystemFailure
 interface DirectoryEntry {
   name: string
   path: string
-  type: 'directory' | 'markdown'
+  type: 'directory' | 'markdown' | 'text' | 'code'
+  language?: string | null
 }
 
 interface InitialMarkdownFile {
@@ -41,7 +47,8 @@ interface MarkdownBrowserApi {
   platform: NodeJS.Platform
   selectRootFolder: () => Promise<FileSystemResult<{ rootPath: string }>>
   listDirectory: (directoryPath?: string) => Promise<FileSystemResult<DirectoryEntry[]>>
-  readMarkdownFile: (filePath: string) => Promise<FileSystemResult<{ content: string }>>
+  readFile: (filePath: string) => Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null }>>
+  resolveRelativeResource: (baseFilePath: string, relativePath: string, expectedType: 'image' | 'markdown') => Promise<FileSystemResult<{ path: string }>>
   consumeInitialMarkdownFile: () => Promise<FileSystemResult<InitialMarkdownFile | null>>
   openExternalLink: (url: string) => Promise<FileSystemResult<null>>
 }

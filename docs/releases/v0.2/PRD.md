@@ -29,6 +29,7 @@
 | FR-11 | Explorer | 파일·폴더 아이콘을 적용할 때 SVG 아이콘을 사용한다. 이때 `Open`, `Reload`는 영어 tooltip과 접근 가능한 이름을 갖는 아이콘 버튼으로 전환한다. | Should |
 | FR-12 | Explorer | Explorer를 표시하거나 숨길 수 있다. 다시 표시할 때 마지막으로 조절한 폭을 사용한다. | Must |
 | FR-13 | 지원 파일 | Explorer에는 Markdown, 텍스트, 코드, 설정 파일 중 지원 확장자만 표시한다. 이미지 파일은 Explorer 목록에 표시하지 않는다. | Must |
+| FR-13a | 지원 파일 | 파일 읽기 결과는 Renderer가 표시 방식을 선택할 수 있도록 파일 종류와 하이라이트 언어 정보를 함께 제공한다. | Must |
 | FR-14 | 탭 | 여러 파일을 탭으로 열고 전환·닫기할 수 있다. `Ctrl+T`로 새 빈 탭을 만들고, `Ctrl+Tab` 및 `Ctrl+Shift+Tab`으로 다음·이전 탭으로 이동한다. | Must |
 | FR-15 | 탭 | 탭이 없는 초기 상태와 마지막 탭을 닫은 상태에서는 빈 화면을 표시한다. 빈 화면에서는 `+` 버튼으로 새 빈 탭을 만들 수 있다. | Must |
 | FR-16 | 탭 | `Tab`은 다음 화면 컨트롤로 키보드 포커스를 이동하며, 문서 탭 전환에는 사용하지 않는다. | Must |
@@ -37,14 +38,14 @@
 | FR-19 | 코드 하이라이트 | Markdown 코드 블록과 코드 뷰어에서 Python, C++, TypeScript, JavaScript, JSON, PowerShell, YAML, TOML, Bash 문법 하이라이트를 지원한다. | Must |
 | FR-20 | 코드 복사 | Markdown 코드 블록과 코드 뷰어에 현재 내용을 클립보드로 복사하는 버튼을 제공한다. | Must |
 | FR-21 | 텍스트·코드 뷰어 | 지원 텍스트·코드 파일을 선택하면 읽기 전용 텍스트 뷰어로 연다. | Must |
-| FR-22 | 대용량·바이너리 파일 | 텍스트·코드 뷰어에는 UI 정지를 방지하는 파일 크기 상한을 둔다. 상한 초과 파일, 바이너리 파일 징후, 지원하지 않는 인코딩은 열지 않고 원인을 명확히 표시한다. | Must |
+| FR-22 | 대용량·바이너리 파일 | UI 정지를 방지하기 위해 모든 지원 파일에는 파일 크기 상한을 둔다. 상한 초과 파일, 바이너리 파일 징후, 지원하지 않는 인코딩은 열지 않고 원인을 명확히 표시한다. | Must |
 | FR-23 | 로컬 이미지 | Markdown에서 상대 경로로 참조한 Root Folder 내부 로컬 이미지를 문서 안에 표시한다. 지원 형식은 `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`이다. | Must |
 | FR-24 | 로컬 이미지 | 이미지가 없거나 Root Folder 밖을 가리키면 이미지를 열지 않고 대체 텍스트와 오류 상태를 표시한다. | Must |
 | FR-25 | Markdown 링크 | 상대 경로 `.md` 링크는 대상이 Root Folder 내부일 때만 앱 내부에서 연다. 대상이 이미 열린 경우 해당 탭으로 이동하고, 그렇지 않으면 새 탭으로 연다. | Must |
 | FR-26 | 수동 Reload | `Reload`, `Ctrl+R`, `F5`로 Explorer와 현재 열린 문서를 다시 불러온다. 외부 파일·폴더 변경은 수동 Reload를 실행했을 때만 반영한다. | Must |
 | FR-27 | 파일 감시 | 파일 및 폴더 자동 감시는 제공하지 않는다. | Must |
 | FR-28 | Windows 연결 | 설치된 앱의 아이콘 표시와 Windows Explorer의 자동 뷰어 연결은 `.md` 파일에만 적용한다. 텍스트·코드 파일은 mdviewer 내부 Explorer에서만 열 수 있다. | Must |
-| FR-29 | 직접 실행 | Windows Explorer에서 `.md` 파일을 직접 열면 파일의 부모 폴더를 Root Folder와 Explorer의 현재 디렉터리로 설정하고 독립 Browser Window에서 연다. | Must |
+| FR-29 | 직접 실행 | Windows Explorer에서 `.md` 파일을 직접 열면 파일의 부모 폴더를 Root Folder와 Explorer의 현재 디렉터리로 설정하고 독립 Browser Window에서 연다. 직접 실행 파일에도 일반 파일 열기와 동일한 크기, 바이너리, 인코딩 검증을 적용한다. | Must |
 | FR-30 | 테마 | White와 Dark 모드를 제공하며 기본값은 White 모드이다. | Must |
 | FR-31 | 테마 | Explorer, 탭, 문서, 상태바, Markdown, 코드 블록, 코드 뷰어, 문법 하이라이트 토큰은 선택한 테마에 맞는 일관된 GitHub 계열 스타일을 적용한다. White는 GitHub Light 계열, Dark는 GitHub Dark 계열을 사용한다. | Must |
 | FR-32 | 테마 구현 | 앱 최상위 요소의 `data-theme="light"` 또는 `data-theme="dark"`와 CSS 사용자 정의 속성으로 테마를 전환한다. White와 Dark 화면을 별도로 만들지 않는다. | Must |

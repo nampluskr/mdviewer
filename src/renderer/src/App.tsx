@@ -9,6 +9,8 @@ interface Tab {
   title: string
   content: string
   error: string | null
+  kind: 'empty' | 'markdown' | 'text' | 'code'
+  language: string | null
 }
 
 interface DirectoryState {
@@ -90,7 +92,7 @@ function App(): ReactElement {
         setExpandedPaths(new Set([initialFile.rootPath]))
         setDirectories({})
         setFileError(null)
-        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content, error: null }])
+        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content, error: null, kind: 'markdown', language: null }])
         setActiveTabId('launch-0')
         await loadDirectory(initialFile.rootPath)
       } catch {
@@ -106,7 +108,7 @@ function App(): ReactElement {
   const createEmptyTab = (): void => {
     const id = `empty-${nextTabNumber.current}`
     nextTabNumber.current += 1
-    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '', error: null }])
+    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '', error: null, kind: 'empty', language: null }])
     setFileError(null)
     setActiveTabId(id)
   }
@@ -177,10 +179,10 @@ function App(): ReactElement {
     if (!isExpanded) void loadDirectory(directoryPath)
   }
 
-  const openMarkdownFile = async (entry: DirectoryEntry): Promise<void> => {
+  const openFile = async (entry: DirectoryEntry): Promise<void> => {
     if (!window.markdownBrowser) return
     if (!activeTabId) {
-      setFileError('Create or select a tab before opening a Markdown file.')
+      setFileError('Create or select a tab before opening a file.')
       return
     }
 
@@ -195,7 +197,7 @@ function App(): ReactElement {
     }
 
     setFileError(null)
-    const result = await window.markdownBrowser.readMarkdownFile(entry.path)
+    const result = await window.markdownBrowser.readFile(entry.path)
     if (fileLoadVersions.current.get(targetTabId) !== loadVersion) return
     if (!result.ok) {
       setTabs((currentTabs) => currentTabs.map((tab) => (
@@ -206,7 +208,7 @@ function App(): ReactElement {
 
     setTabs((currentTabs) => currentTabs.map((tab) => (
       tab.id === targetTabId
-        ? { ...tab, filePath: entry.path, title: entry.name, content: result.value.content, error: null }
+        ? { ...tab, filePath: entry.path, title: entry.name, content: result.value.content, error: null, kind: result.value.kind, language: result.value.language }
         : tab
     )))
   }
@@ -218,10 +220,10 @@ function App(): ReactElement {
     return (
       <ul className="explorer-tree" aria-label={depth === 0 ? 'Root folder contents' : undefined}>
         {entries.map((entry) => {
-          if (entry.type === 'markdown') {
+          if (entry.type !== 'directory') {
             return (
               <li key={entry.path}>
-                <button className="explorer-file" type="button" onClick={() => void openMarkdownFile(entry)}>
+                <button className="explorer-file" type="button" onClick={() => void openFile(entry)}>
                   {entry.name}
                 </button>
               </li>
@@ -303,6 +305,7 @@ function App(): ReactElement {
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
+                      img: ({ alt }) => <span className="markdown-image-pending">{alt ?? 'Local image rendering is unavailable.'}</span>,
                       a: ({ href, children }) => (
                         <a
                           href={href}
