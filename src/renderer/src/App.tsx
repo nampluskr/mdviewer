@@ -96,6 +96,32 @@ function formatStatusBar(tab: Tab | null): string {
   return parts.join(' | ')
 }
 
+function EntryIcon({ type }: { type: DirectoryEntry['type'] }): ReactElement {
+  if (type === 'directory') {
+    return (
+      <svg className="entry-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M1.5 4.2a1 1 0 0 1 1-1h3.1l1.1 1.3h6.8a1 1 0 0 1 1 1v6.3a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4.2z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="entry-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="2.5" y="1.5" width="11" height="13" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      {type === 'markdown' ? (
+        <text x="8" y="11" textAnchor="middle" fontSize="7" fontWeight="700" fill="currentColor">M</text>
+      ) : type === 'code' ? (
+        <text x="8" y="10.3" textAnchor="middle" fontSize="5.5" fontWeight="700" fill="currentColor">{'</>'}</text>
+      ) : type === 'text' ? (
+        <>
+          <line x1="4.5" y1="6" x2="11.5" y2="6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+          <line x1="4.5" y1="9" x2="11.5" y2="9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+          <line x1="4.5" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+        </>
+      ) : null}
+    </svg>
+  )
+}
+
 async function openExternalLink(url: string): Promise<FileSystemResult<null> | null> {
   if (!window.markdownBrowser) return null
   return window.markdownBrowser.openExternalLink(url)
@@ -574,7 +600,6 @@ function App(): ReactElement {
             {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse supported files.</p>}
             {rootPath && currentDirectoryPath ? (
               <>
-                <p className="current-directory" title={currentDirectoryPath}>{currentDirectoryPath}</p>
                 <ul className="explorer-tree" aria-label="Current folder contents">
                   <li>
                     <button className="explorer-parent" type="button" disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
@@ -592,8 +617,8 @@ function App(): ReactElement {
                         onFocus={() => setSelectedEntryIndex(index)}
                         onClick={() => activateExplorerEntry(index)}
                       >
-                        <span aria-hidden="true">{entry.type === 'directory' ? '[Folder]' : '[File]'}</span>
-                        {entry.name}
+                        <EntryIcon type={entry.type} />
+                        <span className="entry-name">{entry.name}</span>
                       </button>
                     </li>
                   ))}

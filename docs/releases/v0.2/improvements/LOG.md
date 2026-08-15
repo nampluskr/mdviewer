@@ -166,3 +166,85 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 남은 위험: 이 항목에 대한 반대 벤더 적대적 검증은 CLAUDE.md 규정(재실행 포함 최대 3회)에 따라 3회차로 종료함. 3회차에서 발견된 Minor 1건은 즉시 수정 완료했고 추가 재검증은 실행하지 않음. 현재 알려진 잔여 위험 없음.
 - 사용자 확인/피드백: 사용자가 새 빌드로 직접 재실행해 Explorer 파일/폴더명·탭 제목·버튼이 sans-serif로, 상태바 경로는 monospace로 정상 표시됨을 확인함. 추가 피드백 없음.
 - 상태: 확정
+
+---
+
+## I004. 탐색기 파일·폴더에 아이콘 적용
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: v0.2에서 탐색기 영역 파일·폴더 아이콘 적용을 논의했으나 현재 `[Folder]`, `[File]` 텍스트만 표시됨. 작업 규모 문의 후, 아이콘 종류는 v0.2에서 정의한 현재 뷰어가 지원하는 파일 종류(마크다운/텍스트/코드)로 한정해 진행 요청.
+- 배경 확인 (구현자: Claude Code): `PRD.md` FR-11(우선순위 Should)과 `SPEC.md` 150행("아이콘 도입 전에는 텍스트 버튼을 사용하고, 아이콘 도입 시 SVG 아이콘과 영어 tooltip 사용")에 따라, 현재 `[Folder]`/`[File]` 텍스트 표시는 버그가 아니라 "아이콘 도입 전" 상태였다. `BRIEF.md` 163행 규칙상 폰트 아이콘 대신 SVG를 써야 함. 사용자 확인 결과 Open/Reload 버튼은 이번 범위에서 제외하고 파일/폴더 엔트리에만 아이콘 적용.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: `EntryIcon({ type })` 컴포넌트 신규 추가. `DirectoryEntry['type']`(`directory`/`markdown`/`text`/`code`)에 따라 인라인 SVG를 렌더링 — 폴더 윤곽선, 마크다운은 파일 윤곽선 + "M", 코드는 파일 윤곽선 + "</>", 텍스트는 파일 윤곽선 + 가로줄 3개. 새 npm 의존성 없음(`stroke`/`fill="currentColor"`로 테마 색상 자동 상속). 기존 `<span aria-hidden="true">[Folder]/[File]</span>`을 `<EntryIcon type={entry.type} />`로 교체. 파일명도 `<span className="entry-name">`으로 감싸 아이콘과 분리.
+  - `src/renderer/src/styles.css`: `.entry-icon`(14×14px, `flex: 0 0 auto`), `.entry-name`(ellipsis 처리) 추가. `.explorer-file, .explorer-directory, .explorer-parent`에 `align-items: center` 추가해 아이콘·파일명 수직 정렬.
+  - `..`(상위 폴더 이동) 엔트리는 사용자가 지정한 범위(뷰어가 지원하는 파일 종류)에 해당하지 않아 아이콘 없이 그대로 유지.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 2건. `aria-hidden`이 SVG 최상위에 있어 접근성 트리에서 아이콘 내부 "M"/"</>" 텍스트가 정상적으로 제외됨을 확인. `.explorer-parent`(`..`)에는 `align-items: center` 추가로 인한 회귀 없음을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 2 | 모두 수정 | (1) 파일명이 버튼 안의 raw text node라 flex 컨테이너에서 `text-overflow: ellipsis`가 안정적으로 적용되지 않을 수 있다는 지적 → 파일명을 `<span className="entry-name">`으로 감싸고 그 span에 `overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap;`을 직접 지정해 해결. 실제로 매우 긴 파일명으로 테스트해 말줄임표가 정상 적용됨을 스크린샷으로 확인. (2) `EntryIcon`의 마지막 분기가 암묵적 `else`라 향후 `DirectoryEntry['type']`에 새 값이 추가되면 조용히 text 아이콘으로 표시될 수 있다는 지적 → `type === 'text'`로 명시하고 그 외 값은 아이콘 없음(`null`)으로 변경해 미래 타입 확장 시 눈에 띄게(아이콘 누락) 만듦. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음)
+- 사용자 확인/피드백: 사용자가 "제대로 잘 적용되었습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I005. UI 글꼴 크기·탭 높이·기본 글꼴 색상 조정
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: VS Code UI 기본 글꼴 크기 확인 요청 후, (1) 글꼴 크기 증가, (2) 탭 제목 영역 높이를 글꼴 크기에 맞게 축소, (3) UI 기본 글꼴 색상을 검정 대신 상태바 파일경로에 쓰인 그레이로 변경, (4) UI에는 monospace가 필요 없어 보인다는 4가지 요청. 구현 전 사용자 요청사항을 표로 정리해 보고하고, 탭 높이 목표값과 monospace 범위(경로 포함 여부)를 확인받음.
+- 조사 결과 (WebSearch로 확인, 구현자: Claude Code): VS Code 워크벤치 UI(Explorer 트리 등)의 기본 글꼴 크기는 13px(Activity Bar만 예외적으로 16px)이며, 이는 `SPEC.md` 8.2절에 원래 정의된 "Explorer, 탭, 버튼, 상태 표시 | 13px, 20px" 값과 일치. 기존 구현(`.75rem`=12px)이 SPEC 원본보다 1px 작았음.
+- 사용자 확인 사항: 탭 높이는 28px(SPEC 원본 약 32px보다 더 촘촘하게), monospace는 경로(상태바·`.current-directory`)에 한해 유지(I003 결정 유지).
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/styles.css`:
+    - 글꼴 크기: `.75rem`(12px) → `.8125rem`(13px) — `.new-tab-button, .toolbar-button, .explorer-file, .explorer-directory, .explorer-parent` 공통 규칙, `.tab-button`, `.explorer-header-button`, `.root-name`, `.current-directory`, `.status-bar` 모두 적용.
+    - 탭 높이: `.tab-bar`, `.tab-button`의 `flex`/`min-height`를 `2.25rem`(36px) → `1.75rem`(28px)로 축소.
+    - 기본 글꼴 색상: `.toolbar-button`, `.explorer-header-button`, `.root-name`, `.explorer-file/.explorer-directory/.explorer-parent`의 `color`를 `var(--text)`(거의 검정) → `var(--muted-text)`(그레이, 상태바·경로와 동일 색상 변수)로 변경. 활성 탭 제목(`.tab.is-active .tab-button`)과 "+" 버튼(`.new-tab-button`)은 강조 목적상 `var(--text)`를 의도적으로 유지(판단 근거: 활성 탭 구분과 "+" 버튼의 시각적 눈에 띔 유지).
+    - monospace: 경로(상태바·`.current-directory`)는 사용자 확인대로 그대로 유지, 추가 변경 없음.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 1건, Minor 0건. 탭 텍스트·닫기 버튼은 28px 안에 정상적으로 들어감을 확인. 그레이 색상의 hover/selected 배경 대비도 Light·Dark 모두 WCAG AA 이상(약 4.95~5.48:1)임을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정 | 탭바를 28px로 줄였지만 "+"버튼(`.new-tab-button`)은 여전히 `min-height: 2.5rem`(40px) + `.tab-add-button` 여백 4px로 총 48px여서 탭바 밖으로 넘칠 수 있다는 지적 → `.new-tab-button`을 `min-height/min-width: 1.5rem`(24px), 글자 크기 `1.1rem`으로, `.tab-add-button` 여백을 `.125rem`으로 줄여 28px 탭바 안에 들어가도록 수정. 이 컴포넌트는 I002에서 빈 화면이 제거되며 이제 탭바의 "+" 용도로만 쓰이므로 다른 곳에 영향 없음. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Major 수정 후 CLAUDE.md 규정상 Critical에만 재검증 의무가 있어 추가 반대 벤더 재실행은 생략, 스크린샷으로 직접 확인함.
+- 사용자 확인/피드백: 사용자가 "제대로 잘 적용되었습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I006. 탐색기 폴더 경로 표시 제거, 루트/폴더명 bold 적용
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: 상태바에 파일 경로가 이미 표시되므로 탐색기의 현재 디렉터리 경로 표시가 중복인지 문의 → 사용자가 (1) 경로 표시 제거, (2) 루트 폴더명 bold, (3) 탐색기 내부 폴더명 bold로 결정.
+- 배경 설명 (구현자: Claude Code): `.current-directory`는 실제로는 "루트 경로"가 아니라 `currentDirectoryPath`(탐색기가 지금 보여주는 디렉터리, SPEC.md 32행)였고, 상태바는 활성 탭의 파일 경로를 보여줘 항상 같지는 않지만, Root 폴더를 보고 있는 기본 상태에서는 사실상 중복으로 보일 수 있음을 설명. 사용자가 제거를 확정.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: `<p className="current-directory" title={currentDirectoryPath}>{currentDirectoryPath}</p>` 표시 요소만 제거. `currentDirectoryPath` 상태 자체와 이를 사용하는 탐색 로직(Reload 활성화 조건, 방향키 탐색, 상위 폴더 이동, 디렉터리 삭제 시 Root 복귀 등)은 전혀 변경하지 않음.
+  - `src/renderer/src/styles.css`: 더 이상 쓰이지 않는 `.current-directory` 규칙 삭제. `.root-name`에 `font-weight: 600` 추가. `.explorer-directory`(탐색기 내부 폴더 항목)에 `font-weight: 600`을 추가하는 새 규칙 추가 — `.explorer-file`/`.explorer-parent`는 영향 없음.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 0건. `currentDirectoryPath`의 모든 비표시 사용처(Reload 조건, 방향키 탐색, 상위 폴더 이동, 삭제 시 Root 복귀 등)가 그대로 유지됨을 라인별로 확인. 제거된 표시 요소로 인한 레이아웃 공백이나 접근성 참조 끊김 없음을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 0 | 해당 없음 | - |
+
+- Critical 수정 및 재검증: 해당 없음 (지적 없음)
+- 사용자 확인/피드백: 사용자가 "제대로 잘 적용되었습니다"로 확인함.
+- 상태: 확정

@@ -60,46 +60,48 @@ body { margin: 0; }
   border: 0;
   cursor: pointer;
   font: inherit;
-  font-size: .75rem;
+  font-size: .8125rem;
 }
 
 .new-tab-button {
-  border-radius: 6px;
+  border-radius: 4px;
   background: var(--surface-hover);
   color: var(--text);
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   line-height: 1;
-  min-height: 2.5rem;
-  min-width: 2.5rem;
+  min-height: 1.5rem;
+  min-width: 1.5rem;
 }
 .new-tab-button:hover { background: var(--border); }
 .new-tab-button:focus-visible, .tab-button:focus-visible, .tab-close-button:focus-visible, .toolbar-button:focus-visible, .explorer-file:focus-visible, .explorer-directory:focus-visible, .explorer-parent:focus-visible, .explorer-header-button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
-.tab-bar { display: flex; align-items: center; flex: 0 0 2.25rem; min-height: 2.25rem; border-bottom: 1px solid var(--border); background: var(--surface); }
+.tab-bar { display: flex; align-items: center; flex: 0 0 1.75rem; min-height: 1.75rem; border-bottom: 1px solid var(--border); background: var(--surface); }
 .tab-list { display: flex; flex: 1; min-width: 0; overflow-x: auto; }
 .tab { display: flex; border-right: 1px solid var(--border); }
-.tab-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font: inherit; font-size: .75rem; min-height: 2.25rem; min-width: 9rem; overflow: hidden; padding: 0 1rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.tab-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font: inherit; font-size: .8125rem; min-height: 1.75rem; min-width: 9rem; overflow: hidden; padding: 0 1rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .tab.is-active { background: var(--page-background); }
 .tab.is-active .tab-button { color: var(--text); font-weight: 600; }
 .tab-close-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font-size: 1.25rem; padding: 0 .75rem; }
 .tab-close-button:hover { color: var(--text); }
-.tab-add-button { margin: .25rem; }
-.toolbar-button { align-self: stretch; background: transparent; color: var(--text); padding: 0 .75rem; }
+.tab-add-button { margin: .125rem; }
+.toolbar-button { align-self: stretch; background: transparent; color: var(--muted-text); padding: 0 .75rem; }
 .toolbar-button:hover { background: var(--surface-hover); }
 
 .document-area { display: flex; flex: 1; min-height: 0; }
 .explorer { flex: 0 0 17rem; min-width: 0; overflow: auto; background: var(--surface); padding: .5rem; }
 .explorer-header { display: flex; gap: .25rem; margin-bottom: .5rem; }
-.explorer-header-button { border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font: inherit; font-size: .75rem; padding: .35rem .55rem; }
+.explorer-header-button { border: 0; border-radius: 4px; background: transparent; color: var(--muted-text); cursor: pointer; font: inherit; font-size: .8125rem; padding: .35rem .55rem; }
 .explorer-header-button:hover, .explorer-header-button:focus-visible { background: var(--surface-hover); }
 .explorer-header-button:disabled { color: var(--muted-text); cursor: not-allowed; }
 .explorer-resizer { flex: 0 0 5px; cursor: col-resize; touch-action: none; }
 .explorer-resizer:hover { background: var(--selected-background); }
-.root-name { overflow: hidden; margin: .75rem 0 .4rem; color: var(--text); font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
-.current-directory { overflow: hidden; margin: 0 0 .5rem; color: var(--muted-text); font-family: "Cascadia Code", Consolas, monospace; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.root-name { overflow: hidden; margin: .75rem 0 .4rem; color: var(--muted-text); font-size: .8125rem; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
 .explorer-tree { margin: 0; padding-left: 1rem; list-style: none; }
 .explorer-tree:first-of-type { padding-left: 0; }
-.explorer-file, .explorer-directory, .explorer-parent { display: flex; width: 100%; gap: .4rem; overflow: hidden; background: transparent; color: var(--text); line-height: 1.2; padding: .25rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.explorer-file, .explorer-directory, .explorer-parent { display: flex; align-items: center; width: 100%; gap: .4rem; overflow: hidden; background: transparent; color: var(--muted-text); line-height: 1.2; padding: .25rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.explorer-directory { font-weight: 600; }
+.entry-icon { flex: 0 0 auto; width: 14px; height: 14px; }
+.entry-name { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
 .explorer-file:hover, .explorer-directory:hover, .explorer-parent:hover { background: var(--surface-hover); color: var(--text); }
 .explorer-file.is-selected, .explorer-directory.is-selected { background: var(--selected-background); color: var(--selected-text); }
 .explorer-parent:disabled { color: var(--muted-text); cursor: not-allowed; }
@@ -108,7 +110,7 @@ body { margin: 0; }
 .explorer-error, .document-error { color: var(--error); }
 
 .document-content { flex: 1; min-width: 0; overflow: auto; padding: 2rem; font-size: calc(1rem * var(--content-font-scale, 100) / 100); }
-.status-bar { flex: 0 0 1.75rem; overflow: hidden; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted-text); font-family: "Cascadia Code", Consolas, monospace; font-size: .75rem; line-height: 1.75rem; padding: 0 .75rem; text-overflow: ellipsis; white-space: nowrap; }
+.status-bar { flex: 0 0 1.75rem; overflow: hidden; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted-text); font-family: "Cascadia Code", Consolas, monospace; font-size: .8125rem; line-height: 1.75rem; padding: 0 .75rem; text-overflow: ellipsis; white-space: nowrap; }
 .document-content > h1 { margin-top: 0; }
 .document-status { color: var(--muted-text); }
 
