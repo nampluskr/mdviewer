@@ -1,5 +1,11 @@
 # Markdown Browser v0.2 Specification
 
+## 배포 식별자
+
+`package.json`과 `package-lock.json`의 제품 버전은 `0.2.0`으로 일치해야 하며, NSIS 산출물 파일명에는 해당 버전을 사용한다.
+
+직접 실행 인자는 드라이브 문자가 있는 표준 로컬 절대 `.md` 경로만 허용한다. UNC 형식(`\\server\\share`), 확장 UNC 형식(`\\?\\UNC\\...`), 드라이브 문자가 없는 절대 경로는 `realpath`, `stat`, 파일 읽기 전에 거부한다.
+
 ## 1. 개요
 
 Markdown Browser v0.2는 Windows에서 Root Folder 내부의 Markdown, 텍스트, 코드 파일을 탐색하고 읽기 전용으로 열람하는 Electron 애플리케이션이다. 이 명세는 `docs/releases/v0.2/PRD.md`의 요구사항을 구현과 검증이 가능한 동작으로 정의한다.

@@ -265,8 +265,12 @@
     {
       "id": "phase-08",
       "order": 8,
+      "implementationNotes": [
+        "The distributable package version is 0.2.0 and its NSIS artifact name includes that version.",
+        "Direct-launch arguments reject UNC network paths and paths without a drive letter before filesystem access."
+      ],
       "title": "통합 검증과 패키지 확인",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-07"],
       "scope": [
         "Root 경계, 심볼릭 링크·junction, IPC 입력 검증 회귀 확인",

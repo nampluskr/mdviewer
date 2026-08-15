@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, resolve } from 'node:path'
 import { is } from '@electron-toolkit/utils'
 import { isWithinRoot } from './filesystem-boundary'
 import { classifySupportedFile, isSupportedImage } from './file-classification'
+import { isLocalMarkdownLaunchArgument } from './launch-argument'
 import { decodeUtf8, MAX_TEXT_FILE_BYTES } from './text-file-content'
 
 function escapeHtml(value: string): string {
@@ -185,7 +186,7 @@ function rootForSender(senderId: number): FileSystemResult<RootState> {
 }
 
 async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<InitialMarkdownFileState | null>> {
-  const fileArgument = process.argv.slice(1).find((argument) => isAbsolute(argument) && argument.toLowerCase().endsWith('.md'))
+  const fileArgument = process.argv.slice(1).find(isLocalMarkdownLaunchArgument)
   if (!fileArgument) return succeeded(null)
 
   try {

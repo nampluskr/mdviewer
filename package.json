@@ -1,6 +1,6 @@
 {
   "name": "markdown-browser",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "author": "nampluskr",
   "private": true,
   "description": "A lightweight Windows desktop browser for local Markdown documents.",
@@ -38,7 +38,7 @@
     "productName": "Markdown Browser",
     "directories": { "output": "release" },
     "files": ["out/**/*", "package.json"],
-    "win": { "target": ["nsis"] },
+    "win": { "target": ["nsis"], "icon": "resources/markdown-browser.svg" },
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
