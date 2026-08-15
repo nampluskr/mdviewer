@@ -24,6 +24,7 @@ Claude Code가 이 저장소에서 작업할 때 매 턴 지켜야 하는 규칙
 
 - 릴리스 문서는 `docs/releases/v{major}.{minor}/`에 둔다.
 - 사용자 요청으로 구현 또는 프로젝트 내용이 변경되면 `PLAN.md → backlog.json → PRD.md → SPEC.md` 순서로 갱신한다.
+- 완료된 릴리스 문서는 참조 전용으로 유지하며, 사용자의 명시적 요청 없이는 수정하지 않는다. 문서와 구현 작업은 현재 진행 중인 릴리스 폴더에만 반영한다. 현재 진행 중인 릴리스가 v0.2이면 `docs/releases/v0.2/`만 갱신하고, `docs/releases/v0.1/` 문서는 형식과 과거 결정의 참고 목적으로만 읽는다.
 - Phase 완료 상태는 `backlog.json`의 각 Phase `status` 필드에서만 관리한다.
 
 ## Phase Execution Workflow

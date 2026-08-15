@@ -1,0 +1,275 @@
+{
+  "project": "Markdown Browser",
+  "source": "docs/releases/v0.2/PLAN.md",
+  "executionPolicy": "sequential",
+  "remoteRepository": "https://github.com/nampluskr/mdviewer.git",
+  "changeManagementPolicy": "When a user request changes the implementation or project content, update the affected release documents in this exact order: PLAN.md, backlog.json, PRD.md, then SPEC.md.",
+  "phaseStatusPolicy": "Phase completion is recorded only in each phase's status field. Do not duplicate phase status in README.md, PLAN.md, PRD.md, or SPEC.md.",
+  "implementationLanguagePolicy": "Product functionality must be implemented in TypeScript. Python is not used for Electron or React application features and may only be used for optional development tooling such as test-data generation or verification automation.",
+  "adversarialReviewPolicy": {
+    "reviewerSelection": "The opposite vendor of the phase's last substantive implementer reviews the phase: Claude Sonnet headless CLI after Codex, Codex CLI gpt-5.6-sol after Claude Code. Re-evaluate this choice when token limits require an implementation handoff.",
+    "allowedContext": "Only the listed product source files, adversarialFocus, and specRefs. Do not provide implementation-session context, documents, configuration, test artifacts, Git metadata, or shell access.",
+    "record": "Write docs/releases/v0.2/reviews/A{n}.md with implementer, reviewer, timestamp, files, severity counts, reproduction conditions, SPEC clauses, and disposition.",
+    "criticalPolicy": "Fix every valid Critical finding, rerun relevant verification, then rerun the same opposite-vendor review. Major and Minor findings require a recorded disposition.",
+    "fallback": "If the required reviewer is unavailable, report the error and alternative validation method to the user and obtain approval before omitting it."
+  },
+  "phaseReviewProfiles": {
+    "phase-01": {
+      "reviewId": "A1",
+      "mandatory": false,
+      "adversarialFocus": [
+        "supported-file classification and binary or oversized-file handling",
+        "per-window state isolation",
+        "Renderer, preload, and main-process security boundary"
+      ],
+      "specRefs": ["SPEC 2.1", "SPEC 2.2", "SPEC 3.1-3.3", "SPEC 4.2"]
+    },
+    "phase-02": {
+      "reviewId": "A2",
+      "mandatory": true,
+      "adversarialFocus": [
+        "Root boundary bypass including symbolic links and junctions",
+        "untrusted IPC path input and current-directory traversal",
+        "Folder Picker cancellation, permission, and unavailable-Root errors"
+      ],
+      "specRefs": ["PRD FR-01-FR-13", "SPEC 3.1-3.3", "SPEC 4.1-4.4"]
+    },
+    "phase-03": {
+      "reviewId": "A3",
+      "mandatory": false,
+      "adversarialFocus": [
+        "empty-tab and no-tab invariants",
+        "duplicate file tabs and failed file reads",
+        "active-tab selection after close and keyboard tab switching"
+      ],
+      "specRefs": ["PRD FR-14-FR-17", "SPEC 2.2", "SPEC 5.1-5.2"]
+    },
+    "phase-04": {
+      "reviewId": "A4",
+      "mandatory": false,
+      "adversarialFocus": [
+        "untrusted Markdown rendering and Renderer privilege escalation",
+        "relative image and Markdown-link Root boundary bypass",
+        "copy failure states and code-viewer readability"
+      ],
+      "specRefs": ["PRD FR-18-FR-25", "SPEC 3.1-3.2", "SPEC 6.1-6.4"]
+    },
+    "phase-05": {
+      "reviewId": "A5",
+      "mandatory": false,
+      "adversarialFocus": [
+        "Explorer keyboard focus and hover-state distinction",
+        "parent-directory navigation at Root",
+        "Explorer width bounds, visibility restoration, and accessible controls"
+      ],
+      "specRefs": ["PRD FR-04-FR-12", "PRD FR-36-FR-38", "SPEC 4.3-4.4", "SPEC 8.2", "SPEC 8.4"]
+    },
+    "phase-06": {
+      "reviewId": "A6",
+      "mandatory": false,
+      "adversarialFocus": [
+        "theme-token consistency across Markdown and code surfaces",
+        "content-only font scaling",
+        "focus-mode layout restoration and shortcut conflicts"
+      ],
+      "specRefs": ["PRD FR-30-FR-40", "SPEC 8.1-8.4"]
+    },
+    "phase-07": {
+      "reviewId": "A7",
+      "mandatory": true,
+      "adversarialFocus": [
+        "deleted-file, permission, and unavailable-Root recovery",
+        "Reload scope and stale inactive-tab behavior",
+        "IPC and Root-boundary regression"
+      ],
+      "specRefs": ["PRD FR-22", "PRD FR-26-FR-27", "PRD NFR-04-NFR-06", "SPEC 3.1-3.3", "SPEC 7.1-7.2"]
+    },
+    "phase-08": {
+      "reviewId": "A8",
+      "mandatory": true,
+      "adversarialFocus": [
+        "untrusted direct-launch arguments and Root calculation",
+        "Windows file association and independent-window state isolation",
+        "full Root-boundary and IPC security regression"
+      ],
+      "specRefs": ["PRD FR-03", "PRD FR-28-FR-29", "PRD NFR-04-NFR-06", "SPEC 3.1-3.2", "SPEC 5.3"]
+    }
+  },
+  "phaseCompletionWorkflow": [
+    "Implement the phase scope and verify its acceptance criteria.",
+    "Request adversarial cross-validation from the opposite vendor of the last substantive implementer, using the phase adversarialFocus and specRefs only.",
+    "Fix all valid Critical findings, rerun relevant verification, and rerun the same cross-vendor review after Critical fixes.",
+    "Report the changes, verification results, and remaining risks to the user, then request approval.",
+    "Only after user approval, commit the completed phase and push it to the remote repository."
+  ],
+  "reviewFallback": "If the required opposite-vendor CLI is unavailable, report the reason, propose an alternative validation method, and request user approval before proceeding.",
+  "commitPolicy": "One approved completed phase per commit; do not commit or push before user approval.",
+  "phases": [
+    {
+      "id": "phase-01",
+      "order": 1,
+      "title": "파일 접근 기반과 상태 확장",
+      "status": "pending",
+      "dependsOn": [],
+      "scope": [
+        "지원 확장자와 markdown, text, code, empty 탭 종류 정의",
+        "Root Folder 내부 텍스트·코드 파일 읽기 API 확장",
+        "파일 크기 상한, 바이너리 징후, 지원하지 않는 인코딩 오류 결과 정의",
+        "상대 이미지와 Markdown 링크 대상의 Root 경계 검증 API 구성",
+        "창별 Root, 현재 디렉터리, 탭, Explorer, 집중 보기, 글꼴 크기 상태 모델 확장",
+        "Renderer, preload, main process의 최소 권한 경계 유지"
+      ],
+      "acceptanceCriteria": [
+        "Renderer는 preload가 공개한 API로만 파일과 클립보드 기능을 요청한다.",
+        "지원 파일의 종류와 언어를 일관되게 판별할 수 있다.",
+        "Root 밖, 대용량, 바이너리, 지원하지 않는 인코딩 요청을 구조화된 오류로 구분한다.",
+        "창마다 Root와 UI 상태가 독립적으로 유지된다."
+      ]
+    },
+    {
+      "id": "phase-02",
+      "order": 2,
+      "title": "Root 기반 Explorer",
+      "status": "pending",
+      "dependsOn": ["phase-01"],
+      "scope": [
+        "Open Folder로 Root Folder를 선택하고 취소 시 기존 상태 유지",
+        "currentDirectoryPath의 직접 자식만 표시하는 목록형 Explorer 구현",
+        "목록 첫 항목 .., Root에서의 비활성화, 부모 폴더 이동 구현",
+        "폴더 우선·이름순 정렬과 지원 파일 확장자 필터링",
+        "클릭, 방향 키, Enter 기반 탐색과 실행",
+        "선택·포커스·hover 상태 구분 및 Root·권한 오류 표시"
+      ],
+      "acceptanceCriteria": [
+        "Explorer가 재귀 트리가 아닌 현재 디렉터리 목록으로 동작한다.",
+        "Root 밖으로 이동하거나 Root 밖 파일을 표시·열 수 없다.",
+        "키보드와 마우스로 폴더 이동 및 지원 파일 선택을 수행할 수 있다.",
+        "Folder Picker 취소와 파일 시스템 오류가 기존 정상 상태를 불필요하게 변경하지 않는다."
+      ]
+    },
+    {
+      "id": "phase-03",
+      "order": 3,
+      "title": "탭과 파일 열기 규칙",
+      "status": "pending",
+      "dependsOn": ["phase-01"],
+      "scope": [
+        "탭 없는 초기 화면과 +, Ctrl+T 기반 빈 탭 생성",
+        "파일 열기 전 경로·확장자 검증과 내용 읽기 연결",
+        "동일 절대 경로 탭 활성화 및 중복 탭 생성 방지",
+        "활성 empty 탭의 파일 탭 전환과 새 파일 탭 생성 규칙 구현",
+        "탭 선택·닫기, 인접 탭 활성화, Ctrl+Tab과 Ctrl+Shift+Tab 순환 전환",
+        "일반 Tab 키의 화면 컨트롤 포커스 이동 유지"
+      ],
+      "acceptanceCriteria": [
+        "인자 없는 시작과 마지막 탭 닫기는 탭 없는 빈 화면으로 전환된다.",
+        "같은 파일을 다시 열어도 새 탭이 생성되지 않는다.",
+        "파일 읽기 실패가 기존 탭의 정상 내용을 덮어쓰지 않는다.",
+        "탭 전환 단축키와 키보드 포커스 규칙이 충돌하지 않는다."
+      ]
+    },
+    {
+      "id": "phase-04",
+      "order": 4,
+      "title": "문서·코드 렌더링",
+      "status": "pending",
+      "dependsOn": ["phase-01", "phase-03"],
+      "scope": [
+        "react-markdown과 remark-gfm 기반 Markdown·GFM 렌더링",
+        "지원 언어의 Markdown 코드 블록과 코드 뷰어 문법 하이라이트",
+        "텍스트·코드 읽기 전용 뷰어와 Copy 버튼 구현",
+        "상대 경로 로컬 이미지의 허용 형식·존재·Root 경계 검증과 오류 표시",
+        "상대 .md 링크의 앱 내부 파일 열기 연결",
+        "빈 파일, 렌더링 실패, 복사 성공·실패 상태를 영어 UI로 표시"
+      ],
+      "acceptanceCriteria": [
+        "Markdown과 GFM의 필수 요소가 GitHub Markdown 계열 스타일로 표시된다.",
+        "지원 텍스트·코드 파일은 Markdown Renderer가 아닌 읽기 전용 뷰어로 열린다.",
+        "Copy는 파일을 변경하지 않으며 성공·실패 상태를 구분한다.",
+        "Root 밖, 누락, 미지원 형식의 이미지·링크는 열지 않고 오류 상태를 표시한다."
+      ]
+    },
+    {
+      "id": "phase-05",
+      "order": 5,
+      "title": "Explorer와 일반 화면 UI",
+      "status": "pending",
+      "dependsOn": ["phase-02", "phase-03"],
+      "scope": [
+        "영어 Open, Reload 헤더 버튼과 파일·폴더 표시 구성",
+        "SVG 아이콘 적용 시 영어 tooltip과 접근 가능한 이름 제공",
+        "Explorer 표시·숨김과 창 안에서만 유지되는 마지막 폭 복원",
+        "세로 구분선 드래그와 Explorer 폭 제한 적용",
+        "드래그 중 col-resize 커서와 텍스트 선택 방지",
+        "고정 탭 영역과 일반 보기 상태바의 활성 파일 전체 경로 표시"
+      ],
+      "acceptanceCriteria": [
+        "Explorer 폭은 정의된 범위를 넘지 않으며 숨김 후 다시 표시해도 마지막 폭을 사용한다.",
+        "Explorer 키보드 선택·포커스와 마우스 hover가 시각적으로 구분된다.",
+        "탭 영역은 문서 스크롤과 함께 이동하지 않는다.",
+        "일반 보기 상태바가 파일 경로 또는 경로 없음 상태를 영어로 표시한다."
+      ]
+    },
+    {
+      "id": "phase-06",
+      "order": 6,
+      "title": "테마·가독성·집중 보기",
+      "status": "pending",
+      "dependsOn": ["phase-04", "phase-05"],
+      "scope": [
+        "data-theme와 CSS 사용자 정의 속성 기반 Light/Dark 테마",
+        "Markdown, 코드 블록, 코드 뷰어의 GitHub Light/Dark 계열 스타일",
+        "콘텐츠 영역 전용 contentFontScale과 키보드·마우스 휠 단축키",
+        "F11 기반 focusMode 전환 및 운영체제 전체화면 API 미사용",
+        "집중 보기에서 문서 영역만 표시하고 일반 보기 레이아웃 복원"
+      ],
+      "acceptanceCriteria": [
+        "테마 전환이 별도 화면 없이 CSS 변수로 일관되게 적용된다.",
+        "글꼴 크기 조절은 콘텐츠에만 적용되고 조작 UI 레이아웃을 바꾸지 않는다.",
+        "집중 보기에서 Ctrl+Tab과 Ctrl+Shift+Tab 탭 전환이 계속 동작한다.",
+        "집중 보기 해제 시 이전 Explorer 표시 상태와 폭이 복원된다."
+      ]
+    },
+    {
+      "id": "phase-07",
+      "order": 7,
+      "title": "수동 Reload와 오류 복구",
+      "status": "pending",
+      "dependsOn": ["phase-02", "phase-03", "phase-04", "phase-05", "phase-06"],
+      "scope": [
+        "Reload, Ctrl+R, F5의 단일 수동 Reload 동작 구성",
+        "현재 Explorer 목록과 활성 파일 탭만 다시 읽는 범위 적용",
+        "활성 파일 삭제, 현재 디렉터리 삭제, Root 삭제·이동, 권한 오류 처리",
+        "NOT_FOUND, ACCESS_DENIED, OUTSIDE_ROOT, ROOT_UNAVAILABLE 영어 오류 상태 표시",
+        "자동 감시, debounce 감시, 백그라운드 재읽기가 추가되지 않는지 확인"
+      ],
+      "acceptanceCriteria": [
+        "Reload가 현재 디렉터리와 활성 파일만 갱신하며 비활성 탭을 다시 읽지 않는다.",
+        "파일·폴더 삭제와 권한 오류가 앱 비정상 종료로 이어지지 않는다.",
+        "Root를 사용할 수 없으면 Explorer를 비우고 명확한 상태를 표시한다.",
+        "기존 성공 상태를 유지할 수 있는 오류에서는 정상 내용을 유지한다."
+      ]
+    },
+    {
+      "id": "phase-08",
+      "order": 8,
+      "title": "통합 검증과 패키지 확인",
+      "status": "pending",
+      "dependsOn": ["phase-07"],
+      "scope": [
+        "Root 경계, 심볼릭 링크·junction, IPC 입력 검증 회귀 확인",
+        "Explorer, 탭, 렌더링, 테마, Reload의 핵심 사용자 흐름 수동·자동 검증",
+        "Windows Explorer의 .md 직접 실행과 창별 Root·탭 상태 격리 검증",
+        "Windows 설치 또는 실행 패키지 생성과 .md 파일 연결 설정 확인",
+        "설치 환경에서 Open Folder, 파일 열기, 탭, 렌더링, Reload, 직접 실행 검증",
+        "버전, 아이콘, 배포 산출물 정리"
+      ],
+      "acceptanceCriteria": [
+        "Root 밖 접근과 링크 우회가 모든 파일 접근 경로에서 차단된다.",
+        "직접 실행한 .md 파일은 부모 폴더를 Root로 하는 독립 창에서 열린다.",
+        "Windows 11에서 설치 또는 실행 가능한 v0.2 배포 산출물이 생성된다.",
+        "설치 환경에서 v0.2 핵심 요구사항과 v0.1 직접 실행 흐름이 동작한다."
+      ]
+    }
+  ]
+}
