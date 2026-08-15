@@ -55,7 +55,6 @@ body { margin: 0; }
 .is-resizing, .is-resizing * { cursor: col-resize !important; user-select: none; }
 #root { height: 100vh; }
 .app-shell { display: flex; flex-direction: column; height: 100vh; }
-.empty-state { display: grid; min-height: 100vh; place-items: center; background: var(--page-background, #fff); color: var(--text, #1f2328); }
 
 .new-tab-button, .toolbar-button, .explorer-file, .explorer-directory, .explorer-parent {
   border: 0;

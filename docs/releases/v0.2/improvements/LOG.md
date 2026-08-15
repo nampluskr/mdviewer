@@ -58,3 +58,34 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음. Minor 2건만 수정했으며 CLAUDE.md 규칙상 Critical 미해당 시 재검증 의무는 없어 추가 재실행은 생략함)
 - 사용자 확인/피드백: 사용자가 새 빌드(`release/win-unpacked/Markdown Browser.exe`)로 직접 재실행해 상태바가 `파일경로 | 파일크기 | 생성일` 형식으로 정상 표시됨을 확인함. 추가 피드백 없음.
 - 상태: 확정
+
+---
+
+## I002. 탭 없음 상태의 무의미한 "+" 전용 화면 제거
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: `mdviewer.exe`를 인자 없이 실행하면 화면 중앙에 "+" 버튼만 있는 화면이 나오는데, 이 "+"는 탭바의 새 탭 추가용 "+"가 아니라 뷰어 영역 중앙에 별도로 있는 "+"이며, 눌러도 파일/폴더를 여는 게 아니라 빈 탭만 하나 생성해 실질적으로 쓸모가 없다. 이 화면이 꼭 필요한지, 없애는 게 낫지 않은지 검토 요청.
+
+  (참고: 같은 대화에서 먼저 "mdviewer . / mdviewer <path> 터미널 실행"을 I002로 논의했으나 사용자가 "이번엔 구현하지 않겠다"고 결정해 로그에 기록하지 않았다. 이후 이 항목을 사용자가 "I002로 진행"이라고 지정해 번호를 재사용했다.)
+
+- 원인/현황 분석 (구현자: Claude Code):
+  `App.tsx`에서 `tabs.length === 0`일 때 `<main className="empty-state">` 별도 화면으로 조기 반환하고 있었다. 이 화면에는 중앙 "+" 버튼 하나만 있고, Explorer의 "Open" 버튼이나 폴더 열기 안내는 전혀 보이지 않는다. "+"를 누르면 `createEmptyTab()`으로 빈 탭이 생성되어야 비로소 탭바·Explorer(Open 버튼 포함)·뷰어 영역을 갖춘 정상 레이아웃으로 전환된다. 즉 앱을 처음 켰을 때 실제 진입점(Open 버튼)에 도달하려면 쓸모없는 클릭을 한 번 더 거쳐야 했다. `PRD.md` FR-15("빈 화면에서는 + 버튼으로 새 빈 탭을 만들 수 있다", Must)에 명시된 v0.2 확정 동작이었으나, 사용자 확인 결과 이 화면 자체가 불필요하다고 판단해 v0.2 문서는 그대로 두고(참조 전용) 이 로그에서 동작을 변경하기로 함.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: `tabs.length === 0`일 때의 `.empty-state` 조기 반환 분기를 제거. 탭이 0개여도 처음부터 정상 레이아웃(탭바, Explorer의 Open/Reload 버튼과 "Select a folder to browse supported files." 안내, 문서 영역의 "This tab is ready for a Markdown document." 안내)을 바로 렌더링하도록 변경. `activeTab`이 `null`인 경우의 렌더링 처리는 기존에 "빈 탭(kind: 'empty')" 상태를 위해 이미 구현되어 있던 것을 그대로 재사용.
+  - 제거된 화면에만 있던 `initialLaunchPending`("Opening Markdown file...")과 `launchError` 메시지를 `document-content` 상단으로 이동.
+  - `src/renderer/src/styles.css`: 더 이상 어떤 요소도 사용하지 않는 `.empty-state` 규칙 삭제.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 1건, Minor 3건. Hooks 순서·Explorer 키보드 탐색·중복 aria-label 문제는 없음을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정 | `launchError`가 화면 이동 후에는 탭이 열리거나 파일을 성공적으로 연 뒤에도 계속 표시되는 문제(이전에는 `tabs.length===0` 분기 자체가 사라지면서 자연히 사라졌음) → `initialLaunchPending`/`launchError` 표시 조건에 `tabs.length === 0`을 추가해 이전과 동일하게 탭이 없을 때만 보이도록 수정. |
+  | Minor | 3 | 미수정 (근거 기록) | (1) 초기 로딩 중 "Opening Markdown file..."과 "This tab is ready..."가 동시에 보일 수 있음 — Major 수정으로 tabs.length===0 조건이 추가되며 대부분 완화되었고 잔여 영향은 경미해 별도 처리하지 않음. (2) 탭이 0개일 때 `role="tabpanel"`과 빈 `<h1>`이 렌더링되어 접근성 트리에 이름 없는 헤딩이 남음 — 이는 기존에도 "빈 탭(kind: empty)"이 활성화된 상태에서 이미 존재하던 패턴이며 이번 변경으로 새로 생긴 회귀가 아니라 이번 항목 범위 밖의 별도 접근성 개선 과제로 남김. (3) 좁은 창 폭(약 400px 미만)에서 Explorer 리사이저의 `aria-valuemax`가 `aria-valuemin`보다 작아지는 경우가 있음 — 이 역시 기존 정상 레이아웃(탭이 있을 때)에서도 동일하게 존재하던 문제로, 이번 변경으로 도달 시점이 앞당겨졌을 뿐 새로 만든 결함이 아니라 별도 항목으로 처리. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음)
+- 사용자 확인/피드백: 사용자가 새 빌드로 직접 재실행해 인자 없이 실행 시 정상 레이아웃이 바로 표시됨을 확인함. 추가 피드백 없음.
+- 상태: 확정

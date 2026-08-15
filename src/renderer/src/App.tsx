@@ -539,16 +539,6 @@ function App(): ReactElement {
     )
   }
 
-  if (tabs.length === 0) {
-    return (
-      <main className="empty-state">
-        {initialLaunchPending ? <p className="document-status">Opening Markdown file...</p> : null}
-        {launchError ? <p className="document-error" role="alert">{launchError}</p> : null}
-        <button className="new-tab-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">+</button>
-      </main>
-    )
-  }
-
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
 
   return (
@@ -617,6 +607,8 @@ function App(): ReactElement {
           </>
         ) : null}
         <div className="document-content" style={{ '--content-font-scale': contentFontScale } as React.CSSProperties} onWheel={handleContentWheel}>
+          {tabs.length === 0 && initialLaunchPending ? <p className="document-status">Opening Markdown file...</p> : null}
+          {tabs.length === 0 && launchError ? <p className="document-error" role="alert">{launchError}</p> : null}
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
           <h1>{activeTab?.title}</h1>
           {activeTab?.error ? <p className="document-error" role="alert">{activeTab.error}</p> : activeTab?.filePath ? (
