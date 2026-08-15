@@ -42,13 +42,15 @@ interface InitialMarkdownFile {
   filePath: string
   name: string
   content: string
+  size: number
+  createdAtMs: number
 }
 
 interface MarkdownBrowserApi {
   platform: NodeJS.Platform
   selectRootFolder: () => Promise<FileSystemResult<{ rootPath: string }>>
   listDirectory: (directoryPath?: string) => Promise<FileSystemResult<DirectoryEntry[]>>
-  readFile: (filePath: string) => Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null }>>
+  readFile: (filePath: string) => Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null; size: number; createdAtMs: number }>>
   resolveRelativeResource: (baseFilePath: string, relativePath: string, expectedType: 'image' | 'markdown') => Promise<FileSystemResult<{ path: string }>>
   writeClipboardText: (text: string) => Promise<FileSystemResult<null>>
   consumeInitialMarkdownFile: () => Promise<FileSystemResult<InitialMarkdownFile | null>>

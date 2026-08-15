@@ -65,6 +65,8 @@ interface InitialMarkdownFile {
   filePath: string
   name: string
   content: string
+  size: number
+  createdAtMs: number
 }
 
 interface InitialMarkdownFileState extends InitialMarkdownFile {
@@ -210,7 +212,9 @@ async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<Init
       rootInode: rootStats.ino,
       filePath,
       name: filePath.split(/[\\/]/).filter(Boolean).pop() ?? filePath,
-      content: decoded.value
+      content: decoded.value,
+      size: stats.size,
+      createdAtMs: stats.birthtimeMs
     })
   } catch (error) {
     return errorResult(error, 'READ_FAILED', 'Unable to open the requested Markdown file.')
@@ -305,7 +309,7 @@ function registerFileSystemHandlers(): void {
     }
   })
 
-  ipcMain.handle('filesystem:read-file', async (event, filePath: string): Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null }>> => {
+  ipcMain.handle('filesystem:read-file', async (event, filePath: string): Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null; size: number; createdAtMs: number }>> => {
     const root = rootForSender(event.sender.id)
     if (!root.ok) return root
     const target = await resolvePathWithinRoot(root.value, filePath)
@@ -321,7 +325,7 @@ function registerFileSystemHandlers(): void {
       }
       const decoded = decodeUtf8(await fs.readFile(target.value))
       if (!decoded.ok) return failed(decoded.code, decoded.message)
-      return succeeded({ content: decoded.value, kind: fileType.kind, language: fileType.language })
+      return succeeded({ content: decoded.value, kind: fileType.kind, language: fileType.language, size: stats.size, createdAtMs: stats.birthtimeMs })
     } catch (error) {
       return errorResult(error, 'READ_FAILED', 'Unable to read the requested Markdown file.')
     }
@@ -343,8 +347,8 @@ function registerFileSystemHandlers(): void {
     const initialFile = initialMarkdownFiles.get(event.sender.id) ?? succeeded(null)
     initialMarkdownFiles.delete(event.sender.id)
     if (!initialFile.ok || !initialFile.value) return initialFile
-    const { rootPath, filePath, name, content } = initialFile.value
-    return succeeded({ rootPath, filePath, name, content })
+    const { rootPath, filePath, name, content, size, createdAtMs } = initialFile.value
+    return succeeded({ rootPath, filePath, name, content, size, createdAtMs })
   })
 }
 

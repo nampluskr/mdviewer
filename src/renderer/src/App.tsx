@@ -12,6 +12,8 @@ interface Tab {
   error: string | null
   kind: 'empty' | 'markdown' | 'text' | 'code'
   language: string | null
+  size: number | null
+  createdAtMs: number | null
 }
 
 interface DirectoryState {
@@ -64,6 +66,34 @@ function parentDirectory(path: string): string | null {
 
 function sameFilePath(left: string | null, right: string, platform: NodeJS.Platform): boolean {
   return left !== null && (platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right)
+}
+
+function formatFileSize(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`
+  const units = ['KB', 'MB', 'GB']
+  let value = bytes / 1024
+  let unitIndex = 0
+  while (value >= 1024 && unitIndex < units.length - 1) {
+    value /= 1024
+    unitIndex += 1
+  }
+  return `${value.toFixed(value < 10 ? 1 : 0)} ${units[unitIndex]}`
+}
+
+function formatCreatedDate(createdAtMs: number): string | null {
+  if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return null
+  const date = new Date(createdAtMs)
+  if (Number.isNaN(date.getTime())) return null
+  return date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
+}
+
+function formatStatusBar(tab: Tab | null): string {
+  if (!tab?.filePath) return 'No file path'
+  const parts = [tab.filePath]
+  if (tab.size !== null) parts.push(formatFileSize(tab.size))
+  const createdDate = tab.createdAtMs !== null ? formatCreatedDate(tab.createdAtMs) : null
+  if (createdDate) parts.push(createdDate)
+  return parts.join(' | ')
 }
 
 async function openExternalLink(url: string): Promise<FileSystemResult<null> | null> {
@@ -151,7 +181,7 @@ function App(): ReactElement {
         setRootPath(initialFile.rootPath)
         setCurrentDirectoryPath(initialFile.rootPath)
         setFileError(null)
-        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content, error: null, kind: 'markdown', language: null }])
+        setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content, error: null, kind: 'markdown', language: null, size: initialFile.size, createdAtMs: initialFile.createdAtMs }])
         setActiveTabId('launch-0')
         await loadDirectory(initialFile.rootPath)
       } catch {
@@ -205,7 +235,7 @@ function App(): ReactElement {
     } else if (directoryResult.error.code === 'ROOT_UNAVAILABLE') {
       if (activeTab) {
         setTabs((currentTabs) => currentTabs.map((tab) => (
-          tab.id === activeTab.id ? { ...tab, error: directoryResult.error.message } : tab
+          tab.id === activeTab.id ? { ...tab, error: directoryResult.error.message, size: null, createdAtMs: null } : tab
         )))
       }
       setRootPath(null)
@@ -240,13 +270,15 @@ function App(): ReactElement {
     if (reloadVersion.current !== version) return
     setTabs((currentTabs) => currentTabs.map((tab) => {
       if (tab.id !== activeTab.id) return tab
-      if (!fileResult.ok) return { ...tab, error: fileResult.error.message }
+      if (!fileResult.ok) return { ...tab, error: fileResult.error.message, size: null, createdAtMs: null }
       return {
         ...tab,
         content: fileResult.value.content,
         error: null,
         kind: fileResult.value.kind,
-        language: fileResult.value.language
+        language: fileResult.value.language,
+        size: fileResult.value.size,
+        createdAtMs: fileResult.value.createdAtMs
       }
     }))
   }
@@ -291,7 +323,7 @@ function App(): ReactElement {
     hasUserChangedState.current = true
     const id = `empty-${nextTabNumber.current}`
     nextTabNumber.current += 1
-    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '', error: null, kind: 'empty', language: null }])
+    setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '', error: null, kind: 'empty', language: null, size: null, createdAtMs: null }])
     setFileError(null)
     setActiveTabId(id)
   }
@@ -398,7 +430,9 @@ function App(): ReactElement {
       content: result.value.content,
       error: null,
       kind: result.value.kind,
-      language: result.value.language
+      language: result.value.language,
+      size: result.value.size,
+      createdAtMs: result.value.createdAtMs
     }
     nextTabNumber.current += 1
 
@@ -625,7 +659,7 @@ function App(): ReactElement {
           ) : <p className="document-status">This tab is ready for a Markdown document.</p>}
         </div>
       </section>
-      <footer className="status-bar">{activeTab?.filePath ?? 'No file path'}</footer>
+      <footer className="status-bar">{formatStatusBar(activeTab)}</footer>
     </main>
   )
 }
