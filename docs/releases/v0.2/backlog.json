@@ -202,7 +202,7 @@
       "id": "phase-05",
       "order": 5,
       "title": "Explorer와 일반 화면 UI",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-02", "phase-03"],
       "scope": [
         "영어 Open, Reload 헤더 버튼과 파일·폴더 표시 구성",
@@ -217,6 +217,9 @@
         "Explorer 키보드 선택·포커스와 마우스 hover가 시각적으로 구분된다.",
         "탭 영역은 문서 스크롤과 함께 이동하지 않는다.",
         "일반 보기 상태바가 파일 경로 또는 경로 없음 상태를 영어로 표시한다."
+      ],
+      "implementationNotes": [
+        "Explorer width is window-local Renderer state and pointer drag clamps it to 12rem through 45 percent of the current window. Reload behavior is connected in phase-07; this phase provides its header control placement and accessible presentation."
       ]
     },
     {

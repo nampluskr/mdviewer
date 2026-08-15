@@ -110,6 +110,8 @@ function App(): ReactElement {
   const [rootPath, setRootPath] = useState<string | null>(null)
   const [currentDirectoryPath, setCurrentDirectoryPath] = useState<string | null>(null)
   const [explorerVisible, setExplorerVisible] = useState(true)
+  const [explorerWidth, setExplorerWidth] = useState(272)
+  const [resizingExplorer, setResizingExplorer] = useState(false)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [directory, setDirectory] = useState<DirectoryState>({ entries: [], error: null, loading: false })
@@ -126,6 +128,7 @@ function App(): ReactElement {
   const hasUserChangedState = useRef(false)
   const directoryLoadVersion = useRef(0)
   const explorerEntryRefs = useRef(new Map<number, HTMLButtonElement>())
+  const restoreExplorerFocus = useRef(false)
 
   useEffect(() => {
     const loadInitialMarkdownFile = async (): Promise<void> => {
@@ -233,6 +236,10 @@ function App(): ReactElement {
       ? { entries: result.value, error: null, loading: false }
       : { entries: [], error: result.error.message, loading: false })
     setSelectedEntryIndex(0)
+    if (restoreExplorerFocus.current) {
+      restoreExplorerFocus.current = false
+      window.setTimeout(() => explorerEntryRefs.current.get(0)?.focus(), 0)
+    }
     if (!result.ok) setFolderError(result.error.message)
   }
 
@@ -258,6 +265,7 @@ function App(): ReactElement {
   }
 
   const navigateToDirectory = (directoryPath: string): void => {
+    restoreExplorerFocus.current = true
     setCurrentDirectoryPath(directoryPath)
     setFolderError(null)
     void loadDirectory(directoryPath)
@@ -339,6 +347,7 @@ function App(): ReactElement {
 
   const handleExplorerKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
     if (!rootPath || !currentDirectoryPath) return
+    if (!(event.target instanceof HTMLElement) || !event.target.closest('.explorer-tree')) return
     const maximumIndex = directory.entries.length - 1
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       if (maximumIndex < 0) return
@@ -350,7 +359,7 @@ function App(): ReactElement {
       explorerEntryRefs.current.get(nextIndex)?.focus()
       return
     }
-    if (event.key === 'ArrowLeft' && currentDirectoryPath !== rootPath) {
+    if (event.key === 'ArrowLeft' && !sameFilePath(currentDirectoryPath, rootPath, platform)) {
       event.preventDefault()
       const parent = parentDirectory(currentDirectoryPath)
       if (parent) navigateToDirectory(parent)
@@ -361,6 +370,32 @@ function App(): ReactElement {
       activateExplorerEntry(selectedEntryIndex)
     }
   }
+
+  const startExplorerResize = (event: React.PointerEvent<HTMLDivElement>): void => {
+    event.currentTarget.setPointerCapture(event.pointerId)
+    setResizingExplorer(true)
+  }
+
+  const resizeExplorer = (event: React.PointerEvent<HTMLDivElement>): void => {
+    if (!resizingExplorer) return
+    const minimumWidth = 192
+    const maximumWidth = Math.max(minimumWidth, Math.floor(window.innerWidth * 0.45))
+    setExplorerWidth(Math.min(Math.max(event.clientX, minimumWidth), maximumWidth))
+  }
+
+  const stopExplorerResize = (): void => setResizingExplorer(false)
+
+  const adjustExplorerWidth = (amount: number): void => {
+    const minimumWidth = 192
+    const maximumWidth = Math.max(minimumWidth, Math.floor(window.innerWidth * 0.45))
+    setExplorerWidth((width) => Math.min(Math.max(width + amount, minimumWidth), maximumWidth))
+  }
+
+  useEffect(() => {
+    const clampExplorerWidth = (): void => adjustExplorerWidth(0)
+    window.addEventListener('resize', clampExplorerWidth)
+    return () => window.removeEventListener('resize', clampExplorerWidth)
+  }, [])
 
   if (!platform) {
     return (
@@ -384,7 +419,7 @@ function App(): ReactElement {
   const activeTab = tabs.find((tab) => tab.id === activeTabId) ?? null
 
   return (
-    <main className="app-shell">
+    <main className={resizingExplorer ? 'app-shell is-resizing' : 'app-shell'}>
       <header className="tab-bar" aria-label="Open documents">
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
@@ -403,8 +438,12 @@ function App(): ReactElement {
       </header>
       <section className="document-area" role="tabpanel">
         {explorerVisible ? (
-          <aside className="explorer" aria-label="Explorer" onKeyDown={handleExplorerKeyDown}>
-            <button className="open-folder-button" type="button" onClick={() => void selectRootFolder()}>Open Folder</button>
+          <>
+          <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" onKeyDown={handleExplorerKeyDown}>
+            <div className="explorer-header">
+              <button className="explorer-header-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder">Open</button>
+              <button className="explorer-header-button" type="button" disabled aria-label="Reload current folder" title="Reload current folder">Reload</button>
+            </div>
             {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
             {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse supported files.</p>}
             {rootPath && currentDirectoryPath ? (
@@ -412,7 +451,8 @@ function App(): ReactElement {
                 <p className="current-directory" title={currentDirectoryPath}>{currentDirectoryPath}</p>
                 <ul className="explorer-tree" aria-label="Current folder contents">
                   <li>
-                    <button className="explorer-parent" type="button" disabled={currentDirectoryPath === rootPath} onClick={() => {
+                    <button className="explorer-parent" type="button" disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
+                      if (sameFilePath(currentDirectoryPath, rootPath, platform)) return
                       const parent = parentDirectory(currentDirectoryPath)
                       if (parent) navigateToDirectory(parent)
                     }}>..</button>
@@ -437,6 +477,8 @@ function App(): ReactElement {
               </>
             ) : null}
           </aside>
+          <div className="explorer-resizer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" aria-valuemin={192} aria-valuemax={Math.floor(window.innerWidth * 0.45)} aria-valuenow={explorerWidth} tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); adjustExplorerWidth(event.key === 'ArrowLeft' ? -16 : 16) } }} onPointerDown={startExplorerResize} onPointerMove={resizeExplorer} onPointerUp={stopExplorerResize} onPointerCancel={stopExplorerResize} />
+          </>
         ) : null}
         <div className="document-content">
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
@@ -481,6 +523,7 @@ function App(): ReactElement {
           ) : <p className="document-status">This tab is ready for a Markdown document.</p>}
         </div>
       </section>
+      <footer className="status-bar">{activeTab?.filePath ?? 'No file path'}</footer>
     </main>
   )
 }

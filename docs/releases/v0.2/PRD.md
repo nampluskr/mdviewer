@@ -25,7 +25,7 @@
 | FR-07 | Explorer | 키보드 선택·포커스와 마우스 hover 상태를 명확히 구분해 표시한다. | Should |
 | FR-08 | Explorer | Explorer는 compact하고 dense한 스타일로 표시하며, 헤더에 영어 `Open`, `Reload` 버튼을 제공한다. 버튼은 hover 또는 키보드 포커스일 때만 약한 배경색을 표시한다. | Must |
 | FR-09 | Explorer | Explorer와 문서 영역 사이의 세로 구분선을 드래그하여 Explorer 폭을 조절할 수 있다. 기본 폭은 약 `17rem`, 최소 폭은 약 `12rem`, 최대 폭은 창 너비의 약 45%로 제한한다. | Must |
-| FR-10 | Explorer | 구분선 드래그 중에는 가로 크기 조절 커서를 표시하고 텍스트 선택을 막는다. Explorer를 숨겼다가 다시 표시해도 마지막 조절 폭을 유지한다. 앱 재실행 후 폭 복원은 제공하지 않는다. | Should |
+| FR-10 | Explorer | 구분선 드래그 중에는 가로 크기 조절 커서를 표시하고 텍스트 선택을 막는다. Explorer 폭은 창별 Renderer 런타임 상태로 유지하여 숨김 후 다시 표시해도 마지막 조절 폭을 사용하며, 앱 재실행 후 복원은 제공하지 않는다. | Should |
 | FR-11 | Explorer | 파일·폴더 아이콘을 적용할 때 SVG 아이콘을 사용한다. 이때 `Open`, `Reload`는 영어 tooltip과 접근 가능한 이름을 갖는 아이콘 버튼으로 전환한다. | Should |
 | FR-12 | Explorer | Explorer를 표시하거나 숨길 수 있다. 다시 표시할 때 마지막으로 조절한 폭을 사용한다. | Must |
 | FR-13 | 지원 파일 | Explorer에는 Markdown, 텍스트, 코드, 설정 파일 중 지원 확장자만 표시한다. 이미지 파일은 Explorer 목록에 표시하지 않는다. | Must |
