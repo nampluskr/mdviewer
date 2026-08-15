@@ -114,6 +114,8 @@ Markdown, 텍스트, 코드 파일을 읽기 전용으로 표시하고 문서 �
 - 상대 `.md` 링크의 앱 내부 파일 열기 연결
 - 빈 파일, 렌더링 실패, 복사 성공·실패 상태를 영어 UI로 표시
 
+구현에서는 `react-markdown`의 구성 요소 대체를 사용해 원문 HTML을 렌더링하지 않는다. 상대 이미지와 Markdown 링크는 Renderer가 파일 경로를 직접 사용하지 않고 preload의 `resolveRelativeResource` 결과를 받은 뒤에만 표시하거나 연다. 클립보드 쓰기는 별도 제한 IPC로 요청한다.
+
 ### 완료 기준
 
 - Markdown과 GFM의 필수 요소가 GitHub Markdown 계열 스타일로 표시된다.

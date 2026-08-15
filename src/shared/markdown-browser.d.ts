@@ -50,6 +50,7 @@ interface MarkdownBrowserApi {
   listDirectory: (directoryPath?: string) => Promise<FileSystemResult<DirectoryEntry[]>>
   readFile: (filePath: string) => Promise<FileSystemResult<{ content: string; kind: 'markdown' | 'text' | 'code'; language: string | null }>>
   resolveRelativeResource: (baseFilePath: string, relativePath: string, expectedType: 'image' | 'markdown') => Promise<FileSystemResult<{ path: string }>>
+  writeClipboardText: (text: string) => Promise<FileSystemResult<null>>
   consumeInitialMarkdownFile: () => Promise<FileSystemResult<InitialMarkdownFile | null>>
   openExternalLink: (url: string) => Promise<FileSystemResult<null>>
 }

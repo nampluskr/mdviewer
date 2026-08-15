@@ -1,7 +1,8 @@
-import { Component, useEffect, useRef, useState } from 'react'
+import { Component, isValidElement, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactElement, ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import { CodePanel } from './CodePanel'
 
 interface Tab {
   id: string
@@ -65,9 +66,43 @@ function sameFilePath(left: string | null, right: string, platform: NodeJS.Platf
   return left !== null && (platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right)
 }
 
-function openExternalLink(url: string): void {
-  if (!window.markdownBrowser) return
-  void window.markdownBrowser.openExternalLink(url)
+async function openExternalLink(url: string): Promise<FileSystemResult<null> | null> {
+  if (!window.markdownBrowser) return null
+  return window.markdownBrowser.openExternalLink(url)
+}
+
+function isRelativePath(value: string): boolean {
+  return value.length > 0 && !value.startsWith('#') && !value.startsWith('/') && !/^[a-z][a-z\d+.-]*:/i.test(value)
+}
+
+function fileUrl(path: string): string {
+  const normalized = path.replace(/\\/g, '/')
+  return `file:///${normalized.split('/').map((segment, index) => (
+    index === 0 && /^[a-z]:$/i.test(segment) ? segment : encodeURIComponent(segment)
+  )).join('/')}`
+}
+
+function LocalImage({ alt, baseFilePath, source }: { alt?: string; baseFilePath: string; source?: string }): ReactElement {
+  const [state, setState] = useState<{ source: string | null; error: string | null }>({ source: null, error: null })
+
+  useEffect(() => {
+    let active = true
+    if (!source || !isRelativePath(source)) {
+      setState({ source: null, error: 'Local images must use a relative supported path.' })
+      return () => { active = false }
+    }
+
+    void window.markdownBrowser.resolveRelativeResource(baseFilePath, source, 'image').then((result) => {
+      if (!active) return
+      setState(result.ok ? { source: fileUrl(result.value.path), error: null } : { source: null, error: result.error.message })
+    }).catch(() => {
+      if (active) setState({ source: null, error: 'Unable to load the local image.' })
+    })
+    return () => { active = false }
+  }, [baseFilePath, source])
+
+  if (!state.source) return <span className="markdown-image-error" role="status">{alt ?? 'Image'}: {state.error ?? 'Loading image...'}</span>
+  return <img src={state.source} alt={alt ?? ''} />
 }
 
 function App(): ReactElement {
@@ -228,9 +263,9 @@ function App(): ReactElement {
     void loadDirectory(directoryPath)
   }
 
-  const openFile = async (entry: DirectoryEntry): Promise<void> => {
+  const openFilePath = async (filePath: string, name: string): Promise<void> => {
     if (!window.markdownBrowser) return
-    const alreadyOpen = tabsRef.current.find((tab) => sameFilePath(tab.filePath, entry.path, platform))
+    const alreadyOpen = tabsRef.current.find((tab) => sameFilePath(tab.filePath, filePath, platform))
     if (alreadyOpen) {
       setFileError(null)
       setActiveTabId(alreadyOpen.id)
@@ -238,11 +273,11 @@ function App(): ReactElement {
     }
 
     const targetTabId = activeTabId
-    const loadVersionKey = entry.path
+    const loadVersionKey = filePath
     const loadVersion = (fileLoadVersions.current.get(loadVersionKey) ?? 0) + 1
     fileLoadVersions.current.set(loadVersionKey, loadVersion)
     setFileError(null)
-    const result = await window.markdownBrowser.readFile(entry.path)
+    const result = await window.markdownBrowser.readFile(filePath)
     if (fileLoadVersions.current.get(loadVersionKey) !== loadVersion) return
     fileLoadVersions.current.delete(loadVersionKey)
     if (!result.ok) {
@@ -250,15 +285,15 @@ function App(): ReactElement {
       return
     }
 
-    const existingAfterRead = tabsRef.current.find((tab) => sameFilePath(tab.filePath, entry.path, platform))
+    const existingAfterRead = tabsRef.current.find((tab) => sameFilePath(tab.filePath, filePath, platform))
     if (existingAfterRead) {
       if (activeTabIdRef.current === targetTabId || activeTabIdRef.current === null) setActiveTabId(existingAfterRead.id)
       return
     }
     const fileTab: Tab = {
       id: `file-${nextTabNumber.current}`,
-      filePath: entry.path,
-      title: entry.name,
+      filePath,
+      title: name,
       content: result.value.content,
       error: null,
       kind: result.value.kind,
@@ -276,6 +311,23 @@ function App(): ReactElement {
       setTabs((currentTabs) => [...currentTabs, fileTab])
       if (activeTabIdRef.current === targetTabId || activeTabIdRef.current === null) setActiveTabId(fileTab.id)
     }
+  }
+
+  const openFile = (entry: DirectoryEntry): Promise<void> => openFilePath(entry.path, entry.name)
+
+  const openMarkdownLink = async (baseFilePath: string, href: string): Promise<void> => {
+    if (!isRelativePath(href)) {
+      const externalResult = await openExternalLink(href)
+      if (externalResult && !externalResult.ok) setFileError(externalResult.error.message)
+      return
+    }
+    const relativePath = href.split(/[?#]/)[0]
+    const result = await window.markdownBrowser.resolveRelativeResource(baseFilePath, relativePath, 'markdown')
+    if (!result.ok) {
+      setFileError(result.error.message)
+      return
+    }
+    await openFilePath(result.value.path, fileName(result.value.path))
   }
 
   const activateExplorerEntry = (index: number): void => {
@@ -390,19 +442,26 @@ function App(): ReactElement {
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
           <h1>{activeTab?.title}</h1>
           {activeTab?.error ? <p className="document-error" role="alert">{activeTab.error}</p> : activeTab?.filePath ? (
-            activeTab.content.trim().length > 0 ? (
+            activeTab.content.trim().length > 0 && activeTab.kind === 'markdown' ? (
               <article className="markdown-content">
                 <MarkdownErrorBoundary>
                   <ReactMarkdown
                     remarkPlugins={[remarkGfm]}
                     components={{
-                      img: ({ alt }) => <span className="markdown-image-pending">{alt ?? 'Local image rendering is unavailable.'}</span>,
+                      pre: ({ children }) => {
+                        if (!isValidElement<{ className?: string; children?: ReactNode }>(children)) return <pre>{children}</pre>
+                        const content = String(children.props.children).replace(/\n$/, '')
+                        const language = children.props.className?.match(/language-([^\s]+)/)?.[1] ?? null
+                        return <CodePanel content={content} language={language} label="code block" />
+                      },
+                      code: ({ className, children }) => <code className={className}>{children}</code>,
+                      img: ({ alt, src }) => <LocalImage alt={alt} source={src} baseFilePath={activeTab.filePath ?? ''} />,
                       a: ({ href, children }) => (
                         <a
                           href={href}
                           onClick={(event) => {
                             event.preventDefault()
-                            if (href) openExternalLink(href)
+                            if (href) void openMarkdownLink(activeTab.filePath ?? '', href)
                           }}
                         >
                           {children}
@@ -414,7 +473,11 @@ function App(): ReactElement {
                   </ReactMarkdown>
                 </MarkdownErrorBoundary>
               </article>
-            ) : <p className="document-status">This Markdown file is empty.</p>
+            ) : activeTab.content.trim().length === 0 ? <p className="document-status">This {activeTab.kind === 'markdown' ? 'Markdown' : 'text'} file is empty.</p> : (
+              <div className="code-viewer">
+                <CodePanel content={activeTab.content} language={activeTab.language} label={`${activeTab.title} contents`} />
+              </div>
+            )
           ) : <p className="document-status">This tab is ready for a Markdown document.</p>}
         </div>
       </section>

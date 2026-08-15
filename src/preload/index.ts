@@ -26,6 +26,11 @@ contextBridge.exposeInMainWorld('markdownBrowser', {
     }
     return ipcRenderer.invoke('filesystem:resolve-relative-resource', baseFilePath, relativePath, expectedType)
   },
+  writeClipboardText: (text: string) => (
+    typeof text === 'string'
+      ? ipcRenderer.invoke('clipboard:write-text', text)
+      : invalidPath('Text is required for clipboard copy.')
+  ),
   consumeInitialMarkdownFile: () => ipcRenderer.invoke('filesystem:consume-initial-markdown-file'),
   openExternalLink: (url: string) => (
     typeof url === 'string'

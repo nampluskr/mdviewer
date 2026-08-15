@@ -1,4 +1,4 @@
-import { app, BrowserWindow, dialog, ipcMain, session, shell } from 'electron'
+import { app, BrowserWindow, clipboard, dialog, ipcMain, session, shell } from 'electron'
 import type { OpenDialogOptions } from 'electron'
 import { promises as fs } from 'node:fs'
 import { dirname, isAbsolute, join, resolve } from 'node:path'
@@ -22,8 +22,8 @@ function escapeHtml(value: string): string {
 
 function configureContentSecurityPolicy(): void {
   const policy = is.dev
-    ? "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:*"
-    : "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'"
+    ? "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: file:; font-src 'self' data:; connect-src 'self' http://localhost:* ws://localhost:*"
+    : "default-src 'self'; base-uri 'self'; object-src 'none'; frame-src 'none'; script-src 'self'; style-src 'self'; img-src 'self' data: file:; font-src 'self' data:; connect-src 'self'"
 
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
@@ -217,6 +217,16 @@ async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<Init
 }
 
 function registerFileSystemHandlers(): void {
+  ipcMain.handle('clipboard:write-text', async (_event, text: string): Promise<FileSystemResult<null>> => {
+    if (typeof text !== 'string') return failed('INVALID_PATH', 'Text is required for clipboard copy.')
+    try {
+      clipboard.writeText(text)
+      return succeeded(null)
+    } catch {
+      return failed('READ_FAILED', 'Unable to copy text to the clipboard.')
+    }
+  })
+
   ipcMain.handle('shell:open-external-link', async (_event, url: string): Promise<FileSystemResult<null>> => {
     if (typeof url !== 'string') return failed('INVALID_PATH', 'A valid URL is required.')
 

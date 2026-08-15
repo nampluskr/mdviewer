@@ -178,7 +178,7 @@
       "id": "phase-04",
       "order": 4,
       "title": "문서·코드 렌더링",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-01", "phase-03"],
       "scope": [
         "react-markdown과 remark-gfm 기반 Markdown·GFM 렌더링",
@@ -193,6 +193,9 @@
         "지원 텍스트·코드 파일은 Markdown Renderer가 아닌 읽기 전용 뷰어로 열린다.",
         "Copy는 파일을 변경하지 않으며 성공·실패 상태를 구분한다.",
         "Root 밖, 누락, 미지원 형식의 이미지·링크는 열지 않고 오류 상태를 표시한다."
+      ],
+      "implementationNotes": [
+        "Markdown rendering uses react-markdown component overrides without raw HTML rendering. Relative resources are resolved only through the limited preload API, and clipboard writes use a dedicated IPC operation."
       ]
     },
     {

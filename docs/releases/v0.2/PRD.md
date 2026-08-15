@@ -36,7 +36,7 @@
 | FR-17 | 파일 열기 | Explorer에서 파일을 열 때 동일 파일이 이미 열린 경우 해당 탭으로 이동하고, 그렇지 않으면 새 탭으로 연다. 빈 탭이 활성화되어 있으면 그 탭에 파일을 연다. 읽기 실패는 기존 탭의 정상 내용을 변경하지 않는다. | Must |
 | FR-18 | Markdown | Markdown과 GitHub Flavored Markdown을 렌더링하고, 본문에는 GitHub Markdown과 유사한 읽기 스타일을 적용한다. | Must |
 | FR-19 | 코드 하이라이트 | Markdown 코드 블록과 코드 뷰어에서 Python, C++, TypeScript, JavaScript, JSON, PowerShell, YAML, TOML, Bash 문법 하이라이트를 지원한다. | Must |
-| FR-20 | 코드 복사 | Markdown 코드 블록과 코드 뷰어에 현재 내용을 클립보드로 복사하는 버튼을 제공한다. | Must |
+| FR-20 | 코드 복사 | Markdown 코드 블록과 코드 뷰어에 현재 내용을 제한된 preload IPC를 통해 클립보드로 복사하는 버튼을 제공한다. | Must |
 | FR-21 | 텍스트·코드 뷰어 | 지원 텍스트·코드 파일을 선택하면 읽기 전용 텍스트 뷰어로 연다. | Must |
 | FR-22 | 대용량·바이너리 파일 | UI 정지를 방지하기 위해 모든 지원 파일에는 파일 크기 상한을 둔다. 상한 초과 파일, 바이너리 파일 징후, 지원하지 않는 인코딩은 열지 않고 원인을 명확히 표시한다. | Must |
 | FR-23 | 로컬 이미지 | Markdown에서 상대 경로로 참조한 Root Folder 내부 로컬 이미지를 문서 안에 표시한다. 지원 형식은 `.png`, `.jpg`, `.jpeg`, `.gif`, `.webp`, `.svg`이다. | Must |
