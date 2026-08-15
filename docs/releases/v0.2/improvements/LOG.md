@@ -89,3 +89,80 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음)
 - 사용자 확인/피드백: 사용자가 새 빌드로 직접 재실행해 인자 없이 실행 시 정상 레이아웃이 바로 표시됨을 확인함. 추가 피드백 없음.
 - 상태: 확정
+
+---
+
+## I003. Explorer 파일명·조작 버튼에 VSCode 스타일 monospace 폰트 적용
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: v0.2에서 글꼴을 VSCode 타입으로 적용 요청했었는데, 상태바/프로그램 이름/탐색기 상단 폴더명·폴더 경로는 반영된 것 같지만, 탐색기 영역 내 폴더·파일명과 상단 Open, Reload, Hide Explorer, Dark theme에는 반영되지 않았다며 원인 확인 및 반영을 요청.
+- 원인 분석 (구현자: Claude Code):
+  버그가 아니라 `docs/releases/v0.2/SPEC.md` 8.2절("서체와 탭 영역")에 확정된 설계였다. SPEC 8.2 표는 "Explorer, 탭, 버튼, 상태 표시" 영역을 Segoe UI(sans-serif)로, "코드 블록, 코드 뷰어, 경로"만 `"Cascadia Code", Consolas, monospace`로 지정한다. 실제 구현(`styles.css`)도 이 표를 그대로 따라 상태바·탐색기 경로 텍스트(`.status-bar`, `.current-directory`, "경로"에 해당)만 monospace이고, 탐색기 파일·폴더 이름 버튼(`.explorer-file`, `.explorer-directory`, `.explorer-parent`)과 조작 버튼(`.explorer-header-button`, `.toolbar-button`, `.new-tab-button`)은 `font: inherit`로 조상(:root)의 Segoe UI를 그대로 상속하고 있었다. 다만 초기 기획 문서 `BRIEF.md` 97행에는 "Explorer는 글꼴, 여백, 항목 높이를 포함해 VS Code와 유사한 compact하고 dense한 스타일로 표시되어야 한다"는 더 넓은 요청이 있었고, SPEC 확정 과정에서 "경로만 monospace"로 범위가 좁혀진 것으로 보인다. 사용자 확인 결과 애초 의도대로 Explorer 전체에 monospace를 적용하기로 결정.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/styles.css`: 기존에 이미 쓰이던 `"Cascadia Code", Consolas, monospace` 폰트 스택을 재사용해 아래에 `font-family`를 추가 (새 폰트/의존성 도입 없음).
+    - `.new-tab-button, .toolbar-button, .explorer-file, .explorer-directory, .explorer-parent` (탭 추가 "+", Hide Explorer/Dark theme, 탐색기 파일·폴더 이름)
+    - `.tab-button` (열린 문서 탭 제목 — 사용자가 "전부 다 포함" 요청 시 함께 포함)
+    - `.explorer-header-button` (Open, Reload 버튼)
+    - `.root-name` (탐색기 상단 루트 폴더명 — 기존에는 font-family가 없어 실제로는 sans-serif였음에도 사용자가 "반영된 것 같다"고 인지했던 부분이라, 일관성을 위해 함께 monospace로 전환)
+  - Markdown 본문(`.markdown-content`)은 SPEC 8.2 "Markdown 본문" 행 그대로 sans-serif 유지, 변경하지 않음.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 1건. `font: inherit` 뒤에 `font-family`를 추가하는 방식이 Chromium에서 family만 올바르게 override함을 확인. 이후 규칙에서 대상 셀렉터를 다시 sans-serif로 되돌리는 선언 없음을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 1 | 수정 | `.explorer-file`/`.explorer-directory`/`.explorer-parent`에 `overflow`/`text-overflow`/`white-space` 제어가 없어, monospace 전환으로 글자폭이 넓어지면서 긴 파일·폴더 이름이 탐색기 폭(17rem)을 넘어 가로 스크롤을 유발할 수 있는 문제 → 이미 `.current-directory`/`.root-name`/`.tab-button`에 쓰이던 것과 동일한 `overflow: hidden; text-overflow: ellipsis; white-space: nowrap;` 패턴을 추가해 수정. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음)
+
+### 추가 반영 (같은 I003 항목 내 후속 요청)
+
+- 요청 내용: 적용된 monospace 글꼴 크기가 너무 크다며, 탐색기 상단 폴더 경로(`.current-directory`)와 같은 크기로 맞추고, `.root-name`(루트 폴더명)의 bold도 제거해달라는 요청. 이어서 탐색기 파일/폴더 리스트의 줄간격이 너무 넓다며 dense하게 조정 요청.
+- 확인 답변: `.current-directory`의 글꼴 크기는 `.75rem`(16px 기준 12px)이라고 안내. 탐색기 파일/폴더 리스트(`.explorer-file`/`.explorer-directory`/`.explorer-parent`)에는 `line-height`가 지정되어 있지 않아 브라우저 기본값(`normal`, 약 1.2배)이 적용되고 있었고, `padding: .25rem`으로 상하 4px씩 더해져 있었다고 안내. VS Code의 dense 모드 한 줄 높이(약 22px)를 기준으로 `line-height: 1.2` 명시를 권장.
+- 변경 내용 (구현자: Claude Code):
+  - `.new-tab-button, .toolbar-button, .explorer-file, .explorer-directory, .explorer-parent`, `.tab-button`, `.explorer-header-button`, `.root-name`에 `font-size: .75rem` 추가 (`.current-directory`/`.status-bar`와 동일 크기로 통일). `.new-tab-button`은 자신의 후속 규칙(`font-size: 1.5rem`)이 source order상 뒤에 있어 "+" 글리프 크기는 그대로 유지됨.
+  - `.root-name`에서 `font-weight: 600`(bold) 제거.
+  - `.explorer-file, .explorer-directory, .explorer-parent`에 `line-height: 1.2` 추가로 행 높이를 명시적으로 고정.
+- 반대 벤더 적대적 검증 (2회차)
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 2 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 1건, Minor 0건. `.new-tab-button`의 1.5rem 유지, 이후 규칙에서 재정의 없음, `.explorer-header-button` clipping 없음을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정 | 최초 시도에서 `padding: .2rem .25rem`으로 줄여 행 높이가 약 20.8px가 되어 WCAG 2.2의 24×24px 클릭 대상 기준에 못 미친다는 지적 → `padding`을 `.25rem`(원래 값)으로 되돌려 행 높이를 약 22.4px로 조정. 이는 VS Code 자체의 dense 목록 한 줄 높이(약 22px)와 유사한 수준이며, 변경 전(약 27px)보다는 확실히 촘촘해져 "dense" 요청을 만족하면서 클릭 대상 크기 우려를 완화함. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음)
+
+### 두 번째 후속 반영: monospace 적용 범위 축소 (VS Code 실제 동작 조사 결과 반영)
+
+- 요청 내용: monospace 폰트가 너무 넓게 늘어져 보인다며, VS Code가 탐색기 영역에 실제로 어떤 폰트를 쓰는지 확인 요청.
+- 조사 결과 (WebSearch로 확인, 구현자: Claude Code): VS Code는 워크벤치 UI(탐색기·사이드바·탭·상태바·버튼 등 전체)와 에디터/터미널 콘텐츠에 서로 다른 폰트를 쓴다. 워크벤치 UI는 `system-ui, -apple-system, BlinkMacSystemFont, "Segoe WPC", "Segoe UI", "Ubuntu", "Droid Sans", sans-serif`(Windows에서 사실상 Segoe UI)이고, monospace(`editor.fontFamily`, 기본값 `Consolas, "Courier New", monospace`)는 에디터 본문과 터미널에만 적용된다. 즉 **VS Code 탐색기는 monospace가 아니라 sans-serif**이며, 이번 I003에서 Explorer 파일/폴더명·탭 제목·버튼까지 monospace로 확장한 것은 실제 VS Code 동작과 어긋난 방향이었다. 오히려 v0.2 SPEC.md 8.2("Explorer, 탭, 버튼, 상태 표시"는 sans-serif, "코드 블록·코드 뷰어·경로"만 monospace)가 VS Code 실제 동작과 더 정확히 일치했다.
+- 변경 내용 (구현자: Claude Code): 앞서 추가했던 `font-family: "Cascadia Code", Consolas, monospace;`를 아래 4곳에서 제거해 `:root`의 sans-serif(`"Segoe UI Variable", "Segoe UI", "Malgun Gothic", sans-serif`)를 다시 상속하도록 되돌림. 이전 라운드에서 적용한 `font-size: .75rem`과 dense 행 간격(`line-height: 1.2`, `padding: .25rem`)은 폰트 종류와 무관하게 유효한 개선이라 그대로 유지.
+  - `.new-tab-button, .toolbar-button, .explorer-file, .explorer-directory, .explorer-parent`
+  - `.tab-button`
+  - `.explorer-header-button`
+  - `.root-name`
+  - `.current-directory`, `.status-bar`, 코드 블록·코드 뷰어(`.markdown-content code`, `.code-language`, `.code-panel code`)는 SPEC 8.2 "경로"·"코드"에 해당하므로 monospace 유지, 변경하지 않음.
+- 반대 벤더 적대적 검증 (3회차 — CLAUDE.md 규정상 이 항목의 마지막 허용 실행)
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 3 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 1건. `.root-name`이 조상 체인을 통해 sans-serif를 정상 상속함을 확인. 이전 라운드에서 고친 ellipsis 처리와 dense 행 높이가 이번 되돌리기로 회귀하지 않았음을 확인. 남은 monospace 선언(`.current-directory`, `.status-bar`, 코드 관련)이 의도된 대상과 정확히 일치함을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 1 | 수정 | `.tab-button`에서 `font-family`만 제거하고 `font: inherit`가 없어, Chromium의 `<button>` 사용자 에이전트 기본 글꼴(Segoe UI가 아닌 브라우저 기본 버튼 글꼴)이 적용될 수 있다는 지적 → 다른 버튼 셀렉터들과 동일하게 `font: inherit`를 추가해 `:root`의 sans-serif 스택을 명시적으로 상속하도록 수정. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음)
+- 남은 위험: 이 항목에 대한 반대 벤더 적대적 검증은 CLAUDE.md 규정(재실행 포함 최대 3회)에 따라 3회차로 종료함. 3회차에서 발견된 Minor 1건은 즉시 수정 완료했고 추가 재검증은 실행하지 않음. 현재 알려진 잔여 위험 없음.
+- 사용자 확인/피드백: 사용자가 새 빌드로 직접 재실행해 Explorer 파일/폴더명·탭 제목·버튼이 sans-serif로, 상태바 경로는 monospace로 정상 표시됨을 확인함. 추가 피드백 없음.
+- 상태: 확정
