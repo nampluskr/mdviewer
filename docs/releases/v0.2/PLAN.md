@@ -62,7 +62,7 @@ v0.2의 지원 파일과 상대 리소스를 안전하게 처리할 수 있도�
 
 ### 작업 범위
 
-- `Open Folder`로 Root Folder를 선택하고 취소 시 기존 상태 유지
+- `Open Folder`로 Root Folder를 선택하고 취소 시 기존 상태 유지, 대화상자 실패 시 영어 오류 상태 표시
 - `currentDirectoryPath`의 직접 자식만 표시하는 목록형 Explorer 구현
 - 목록 첫 항목 `..`, Root에서의 비활성화, 부모 폴더 이동 구현
 - 폴더 우선·이름순 정렬과 지원 파일 확장자 필터링

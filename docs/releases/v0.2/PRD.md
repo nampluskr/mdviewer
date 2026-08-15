@@ -17,7 +17,7 @@
 | ID | 기능 영역 | 요구사항 | 우선순위 |
 |---|---|---|---|
 | FR-01 | Root Folder | Browser Window마다 하나의 Root Folder를 관리하고, 다른 창과 Root Folder·Explorer 상태·탭·활성 탭을 공유하지 않는다. | Must |
-| FR-02 | Folder Open | 사용자는 Open Folder로 임의의 폴더를 Root Folder로 선택할 수 있다. 선택을 취소하면 오류를 표시하지 않고 현재 Root Folder, Explorer, 탭 상태를 유지한다. | Must |
+| FR-02 | Folder Open | 사용자는 Open Folder로 임의의 폴더를 Root Folder로 선택할 수 있다. 선택을 취소하면 오류를 표시하지 않고 현재 Root Folder, Explorer, 탭 상태를 유지한다. 대화상자를 열지 못하면 기존 상태를 유지하고 영어 오류 상태를 표시한다. | Must |
 | FR-03 | 파일 범위 | Explorer와 파일 열람은 Root Folder 및 그 하위 경로로 제한한다. Root 밖으로의 탐색과 파일 접근은 허용하지 않는다. | Must |
 | FR-04 | Explorer | Explorer는 Root Folder의 고정 트리가 아니라 현재 디렉터리의 파일과 하위 폴더 목록을 표시하는 디렉터리 이동형 탐색기로 동작한다. | Must |
 | FR-05 | Explorer | 목록 맨 위에 항상 `..` 항목을 표시한다. Root Folder 밖에서는 `..`을 비활성화하고, 그 밖에서는 `..`을 선택해 Root 범위 안의 부모 폴더로 이동할 수 있다. | Must |

@@ -1,6 +1,7 @@
 type FileSystemErrorCode =
   | 'ACCESS_DENIED'
   | 'BINARY_FILE'
+  | 'CANCELLED'
   | 'FILE_TOO_LARGE'
   | 'INVALID_PATH'
   | 'NOT_FOUND'

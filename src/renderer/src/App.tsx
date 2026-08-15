@@ -54,6 +54,13 @@ function fileName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
 
+function parentDirectory(path: string): string | null {
+  const normalized = path.replace(/[\\/]+$/, '')
+  const separatorIndex = Math.max(normalized.lastIndexOf('\\'), normalized.lastIndexOf('/'))
+  if (separatorIndex < 0) return null
+  return normalized.slice(0, separatorIndex) || null
+}
+
 function openExternalLink(url: string): void {
   if (!window.markdownBrowser) return
   void window.markdownBrowser.openExternalLink(url)
@@ -62,18 +69,20 @@ function openExternalLink(url: string): void {
 function App(): ReactElement {
   const platform = window.markdownBrowser?.platform
   const [rootPath, setRootPath] = useState<string | null>(null)
+  const [currentDirectoryPath, setCurrentDirectoryPath] = useState<string | null>(null)
   const [explorerVisible, setExplorerVisible] = useState(true)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
-  const [expandedPaths, setExpandedPaths] = useState<Set<string>>(new Set())
-  const [directories, setDirectories] = useState<Record<string, DirectoryState>>({})
+  const [directory, setDirectory] = useState<DirectoryState>({ entries: [], error: null, loading: false })
+  const [selectedEntryIndex, setSelectedEntryIndex] = useState(0)
   const [folderError, setFolderError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [launchError, setLaunchError] = useState<string | null>(null)
   const [initialLaunchPending, setInitialLaunchPending] = useState(true)
   const nextTabNumber = useRef(1)
   const fileLoadVersions = useRef(new Map<string, number>())
-  const directoryLoadVersions = useRef(new Map<string, number>())
+  const directoryLoadVersion = useRef(0)
+  const explorerEntryRefs = useRef(new Map<number, HTMLButtonElement>())
 
   useEffect(() => {
     const loadInitialMarkdownFile = async (): Promise<void> => {
@@ -89,8 +98,7 @@ function App(): ReactElement {
 
         const initialFile = result.value
         setRootPath(initialFile.rootPath)
-        setExpandedPaths(new Set([initialFile.rootPath]))
-        setDirectories({})
+        setCurrentDirectoryPath(initialFile.rootPath)
         setFileError(null)
         setTabs([{ id: 'launch-0', filePath: initialFile.filePath, title: initialFile.name, content: initialFile.content, error: null, kind: 'markdown', language: null }])
         setActiveTabId('launch-0')
@@ -134,49 +142,42 @@ function App(): ReactElement {
   const loadDirectory = async (directoryPath: string): Promise<void> => {
     if (!window.markdownBrowser) return
 
-    const loadVersion = (directoryLoadVersions.current.get(directoryPath) ?? 0) + 1
-    directoryLoadVersions.current.set(directoryPath, loadVersion)
-    setDirectories((current) => ({
-      ...current,
-      [directoryPath]: { entries: current[directoryPath]?.entries ?? [], error: null, loading: true }
-    }))
+    const loadVersion = directoryLoadVersion.current + 1
+    directoryLoadVersion.current = loadVersion
+    setDirectory((current) => ({ ...current, error: null, loading: true }))
     const result = await window.markdownBrowser.listDirectory(directoryPath)
-    if (directoryLoadVersions.current.get(directoryPath) !== loadVersion) return
-    setDirectories((current) => ({
-      ...current,
-      [directoryPath]: result.ok
-        ? { entries: result.value, error: null, loading: false }
-        : { entries: [], error: result.error.message, loading: false }
-    }))
-    if (!result.ok && directoryPath === rootPath) setFolderError(result.error.message)
+    if (directoryLoadVersion.current !== loadVersion) return
+    setDirectory(result.ok
+      ? { entries: result.value, error: null, loading: false }
+      : { entries: [], error: result.error.message, loading: false })
+    setSelectedEntryIndex(0)
+    if (!result.ok) setFolderError(result.error.message)
   }
 
   const selectRootFolder = async (): Promise<void> => {
     if (!window.markdownBrowser) return
 
-    setFolderError(null)
-    const result = await window.markdownBrowser.selectRootFolder()
-    if (!result.ok) {
-      setFolderError(result.error.message)
-      return
-    }
+    try {
+      const result = await window.markdownBrowser.selectRootFolder()
+      if (!result.ok) {
+        if (result.error.code !== 'CANCELLED') setFolderError(result.error.message)
+        return
+      }
 
-    setRootPath(result.value.rootPath)
-    setExpandedPaths(new Set([result.value.rootPath]))
-    setDirectories({})
-    setFileError(null)
-    await loadDirectory(result.value.rootPath)
+      setRootPath(result.value.rootPath)
+      setCurrentDirectoryPath(result.value.rootPath)
+      setFileError(null)
+      setFolderError(null)
+      await loadDirectory(result.value.rootPath)
+    } catch {
+      setFolderError('Unable to select a root folder.')
+    }
   }
 
-  const toggleDirectory = (directoryPath: string): void => {
-    const isExpanded = expandedPaths.has(directoryPath)
-    setExpandedPaths((current) => {
-      const next = new Set(current)
-      if (isExpanded) next.delete(directoryPath)
-      else next.add(directoryPath)
-      return next
-    })
-    if (!isExpanded) void loadDirectory(directoryPath)
+  const navigateToDirectory = (directoryPath: string): void => {
+    setCurrentDirectoryPath(directoryPath)
+    setFolderError(null)
+    void loadDirectory(directoryPath)
   }
 
   const openFile = async (entry: DirectoryEntry): Promise<void> => {
@@ -213,38 +214,36 @@ function App(): ReactElement {
     )))
   }
 
-  const renderDirectory = (directoryPath: string, depth: number): ReactElement => {
-    const directory = directories[directoryPath]
-    const entries = directory?.entries ?? []
+  const activateExplorerEntry = (index: number): void => {
+    const entry = directory.entries[index]
+    if (!entry) return
+    if (entry.type === 'directory') navigateToDirectory(entry.path)
+    else void openFile(entry)
+  }
 
-    return (
-      <ul className="explorer-tree" aria-label={depth === 0 ? 'Root folder contents' : undefined}>
-        {entries.map((entry) => {
-          if (entry.type !== 'directory') {
-            return (
-              <li key={entry.path}>
-                <button className="explorer-file" type="button" onClick={() => void openFile(entry)}>
-                  {entry.name}
-                </button>
-              </li>
-            )
-          }
-
-          const isExpanded = expandedPaths.has(entry.path)
-          return (
-            <li key={entry.path}>
-              <button className="explorer-directory" type="button" onClick={() => toggleDirectory(entry.path)} aria-expanded={isExpanded}>
-                <span aria-hidden="true">{isExpanded ? '−' : '+'}</span>
-                {entry.name}
-              </button>
-              {isExpanded ? renderDirectory(entry.path, depth + 1) : null}
-            </li>
-          )
-        })}
-        {directory?.loading ? <li className="explorer-status">Loading folder…</li> : null}
-        {directory?.error ? <li className="explorer-error">{directory.error}</li> : null}
-      </ul>
-    )
+  const handleExplorerKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
+    if (!rootPath || !currentDirectoryPath) return
+    const maximumIndex = directory.entries.length - 1
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (maximumIndex < 0) return
+      event.preventDefault()
+      const nextIndex = event.key === 'ArrowDown'
+        ? Math.min(selectedEntryIndex + 1, maximumIndex)
+        : Math.max(selectedEntryIndex - 1, 0)
+      setSelectedEntryIndex(nextIndex)
+      explorerEntryRefs.current.get(nextIndex)?.focus()
+      return
+    }
+    if (event.key === 'ArrowLeft' && currentDirectoryPath !== rootPath) {
+      event.preventDefault()
+      const parent = parentDirectory(currentDirectoryPath)
+      if (parent) navigateToDirectory(parent)
+      return
+    }
+    if (event.key === 'ArrowRight' || event.key === 'Enter') {
+      event.preventDefault()
+      activateExplorerEntry(selectedEntryIndex)
+    }
   }
 
   if (!platform) {
@@ -288,11 +287,39 @@ function App(): ReactElement {
       </header>
       <section className="document-area" role="tabpanel">
         {explorerVisible ? (
-          <aside className="explorer" aria-label="Explorer">
+          <aside className="explorer" aria-label="Explorer" onKeyDown={handleExplorerKeyDown}>
             <button className="open-folder-button" type="button" onClick={() => void selectRootFolder()}>Open Folder</button>
             {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
-            {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse Markdown files.</p>}
-            {rootPath ? renderDirectory(rootPath, 0) : null}
+            {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse supported files.</p>}
+            {rootPath && currentDirectoryPath ? (
+              <>
+                <p className="current-directory" title={currentDirectoryPath}>{currentDirectoryPath}</p>
+                <ul className="explorer-tree" aria-label="Current folder contents">
+                  <li>
+                    <button className="explorer-parent" type="button" disabled={currentDirectoryPath === rootPath} onClick={() => {
+                      const parent = parentDirectory(currentDirectoryPath)
+                      if (parent) navigateToDirectory(parent)
+                    }}>..</button>
+                  </li>
+                  {directory.entries.map((entry, index) => (
+                    <li key={entry.path}>
+                      <button
+                        ref={(element) => { if (element) explorerEntryRefs.current.set(index, element); else explorerEntryRefs.current.delete(index) }}
+                        className={`${entry.type === 'directory' ? 'explorer-directory' : 'explorer-file'}${index === selectedEntryIndex ? ' is-selected' : ''}`}
+                        type="button"
+                        onFocus={() => setSelectedEntryIndex(index)}
+                        onClick={() => activateExplorerEntry(index)}
+                      >
+                        <span aria-hidden="true">{entry.type === 'directory' ? '[Folder]' : '[File]'}</span>
+                        {entry.name}
+                      </button>
+                    </li>
+                  ))}
+                  {directory.loading ? <li className="explorer-status">Loading folder...</li> : null}
+                  {directory.error ? <li className="explorer-error" role="alert">{directory.error}</li> : null}
+                </ul>
+              </>
+            ) : null}
           </aside>
         ) : null}
         <div className="document-content">

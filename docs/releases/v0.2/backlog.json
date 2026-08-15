@@ -136,7 +136,7 @@
       "id": "phase-02",
       "order": 2,
       "title": "Root 기반 Explorer",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-01"],
       "scope": [
         "Open Folder로 Root Folder를 선택하고 취소 시 기존 상태 유지",

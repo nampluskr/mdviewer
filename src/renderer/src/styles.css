@@ -10,7 +10,7 @@ body { margin: 0; }
 .app-shell { display: flex; flex-direction: column; min-height: 100vh; }
 .empty-state { display: grid; min-height: 100vh; place-items: center; }
 
-.new-tab-button, .toolbar-button, .open-folder-button, .explorer-file, .explorer-directory {
+.new-tab-button, .toolbar-button, .open-folder-button, .explorer-file, .explorer-directory, .explorer-parent {
   border: 0;
   cursor: pointer;
   font: inherit;
@@ -26,7 +26,7 @@ body { margin: 0; }
   min-width: 2.5rem;
 }
 .new-tab-button:hover { background: #cbd5e1; }
-.new-tab-button:focus-visible, .tab-button:focus-visible, .tab-close-button:focus-visible, .toolbar-button:focus-visible, .open-folder-button:focus-visible, .explorer-file:focus-visible, .explorer-directory:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
+.new-tab-button:focus-visible, .tab-button:focus-visible, .tab-close-button:focus-visible, .toolbar-button:focus-visible, .open-folder-button:focus-visible, .explorer-file:focus-visible, .explorer-directory:focus-visible, .explorer-parent:focus-visible { outline: 2px solid #2563eb; outline-offset: -2px; }
 
 .tab-bar { display: flex; align-items: center; min-height: 3rem; border-bottom: 1px solid #cbd5e1; background: #f1f5f9; }
 .tab-list { display: flex; flex: 1; min-width: 0; overflow-x: auto; }
@@ -45,10 +45,13 @@ body { margin: 0; }
 .open-folder-button { width: 100%; border-radius: 4px; background: #2563eb; color: #fff; padding: .5rem .75rem; }
 .open-folder-button:hover { background: #1d4ed8; }
 .root-name { overflow: hidden; margin: .75rem 0 .4rem; color: #0f172a; font-weight: 600; text-overflow: ellipsis; white-space: nowrap; }
+.current-directory { overflow: hidden; margin: 0 0 .5rem; color: #64748b; font-family: Consolas, "Courier New", monospace; font-size: .75rem; text-overflow: ellipsis; white-space: nowrap; }
 .explorer-tree { margin: 0; padding-left: 1rem; list-style: none; }
 .explorer-tree:first-of-type { padding-left: 0; }
-.explorer-file, .explorer-directory { display: flex; width: 100%; gap: .4rem; background: transparent; color: #334155; padding: .25rem; text-align: left; }
-.explorer-file:hover, .explorer-directory:hover { background: #e2e8f0; color: #0f172a; }
+.explorer-file, .explorer-directory, .explorer-parent { display: flex; width: 100%; gap: .4rem; background: transparent; color: #334155; padding: .25rem; text-align: left; }
+.explorer-file:hover, .explorer-directory:hover, .explorer-parent:hover { background: #e2e8f0; color: #0f172a; }
+.explorer-file.is-selected, .explorer-directory.is-selected { background: #dbeafe; color: #1e3a8a; }
+.explorer-parent:disabled { color: #94a3b8; cursor: not-allowed; }
 .explorer-status, .explorer-error { margin: .75rem 0; font-size: .875rem; }
 .explorer-status { color: #64748b; }
 .explorer-error, .document-error { color: #b91c1c; }

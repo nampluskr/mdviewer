@@ -38,6 +38,7 @@ function configureContentSecurityPolicy(): void {
 type FileSystemErrorCode =
   | 'ACCESS_DENIED'
   | 'BINARY_FILE'
+  | 'CANCELLED'
   | 'FILE_TOO_LARGE'
   | 'INVALID_PATH'
   | 'NOT_FOUND'
@@ -65,8 +66,21 @@ interface InitialMarkdownFile {
   content: string
 }
 
-const windowRoots = new Map<number, string>()
-const initialMarkdownFiles = new Map<number, FileSystemResult<InitialMarkdownFile | null>>()
+interface InitialMarkdownFileState extends InitialMarkdownFile {
+  rootRealPath: string
+  rootDevice: number
+  rootInode: number
+}
+
+interface RootState {
+  path: string
+  realPath: string
+  device: number
+  inode: number
+}
+
+const windowRoots = new Map<number, RootState>()
+const initialMarkdownFiles = new Map<number, FileSystemResult<InitialMarkdownFileState | null>>()
 
 function succeeded<T>(value: T): FileSystemResult<T> {
   return { ok: true, value }
@@ -85,7 +99,22 @@ function errorResult<T>(error: unknown, fallbackCode: FileSystemErrorCode, fallb
   return failed(fallbackCode, fallbackMessage)
 }
 
-async function resolvePathWithinRoot(rootPath: string, requestedPath: string): Promise<FileSystemResult<string>> {
+async function verifyRoot(root: RootState): Promise<FileSystemResult<null>> {
+  try {
+    const [realPath, stats] = await Promise.all([fs.realpath(root.path), fs.stat(root.path)])
+    if (realPath !== root.realPath || stats.dev !== root.device || stats.ino !== root.inode) {
+      return failed('ROOT_UNAVAILABLE', 'The selected root folder is no longer available.')
+    }
+    return succeeded(null)
+  } catch (error) {
+    if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'EACCES') {
+      return failed('ACCESS_DENIED', 'Access to the selected root folder was denied.')
+    }
+    return failed('ROOT_UNAVAILABLE', 'The selected root folder is unavailable.')
+  }
+}
+
+async function resolvePathWithinRoot(root: RootState, requestedPath: string): Promise<FileSystemResult<string>> {
   if (typeof requestedPath !== 'string' || requestedPath.length === 0) {
     return failed('INVALID_PATH', 'A valid path is required.')
   }
@@ -95,21 +124,22 @@ async function resolvePathWithinRoot(rootPath: string, requestedPath: string): P
   }
 
   const absolutePath = resolve(requestedPath)
-  if (!isWithinRoot(rootPath, absolutePath)) {
+  if (!isWithinRoot(root.path, absolutePath)) {
     return failed('OUTSIDE_ROOT', 'The requested path is outside the selected root folder.')
   }
 
   try {
-    const realRootPath = await fs.realpath(rootPath)
+    const availableRoot = await verifyRoot(root)
+    if (!availableRoot.ok) return availableRoot
     const realPath = await fs.realpath(absolutePath)
-    if (!isWithinRoot(realRootPath, realPath)) {
+    if (!isWithinRoot(root.realPath, realPath)) {
       return failed('OUTSIDE_ROOT', 'The requested path resolves outside the selected root folder.')
     }
     return succeeded(realPath)
   } catch (error) {
     if (error && typeof error === 'object' && 'code' in error && (error as { code?: string }).code === 'ENOENT') {
       try {
-        await fs.realpath(rootPath)
+        await verifyRoot(root)
       } catch {
         return failed('ROOT_UNAVAILABLE', 'The selected root folder is unavailable.')
       }
@@ -119,7 +149,7 @@ async function resolvePathWithinRoot(rootPath: string, requestedPath: string): P
 }
 
 async function resolveRelativePathWithinRoot(
-  rootPath: string,
+  root: RootState,
   baseFilePath: string,
   relativePath: string,
   expectedType: 'image' | 'markdown'
@@ -131,15 +161,16 @@ async function resolveRelativePathWithinRoot(
     return failed('UNSUPPORTED_TYPE', 'The requested resource type is not supported.')
   }
 
-  const baseFile = await resolvePathWithinRoot(rootPath, baseFilePath)
+  const baseFile = await resolvePathWithinRoot(root, baseFilePath)
   if (!baseFile.ok) return baseFile
   const candidatePath = resolve(dirname(baseFile.value), relativePath)
-  if (!isWithinRoot(rootPath, candidatePath)) return failed('OUTSIDE_ROOT', 'The requested path is outside the selected root folder.')
+  if (!isWithinRoot(root.path, candidatePath)) return failed('OUTSIDE_ROOT', 'The requested path is outside the selected root folder.')
 
   try {
-    const realRootPath = await fs.realpath(rootPath)
+    const availableRoot = await verifyRoot(root)
+    if (!availableRoot.ok) return availableRoot
     const realPath = await fs.realpath(candidatePath)
-    if (!isWithinRoot(realRootPath, realPath)) return failed('OUTSIDE_ROOT', 'The requested path resolves outside the selected root folder.')
+    if (!isWithinRoot(root.realPath, realPath)) return failed('OUTSIDE_ROOT', 'The requested path resolves outside the selected root folder.')
     const stats = await fs.stat(realPath)
     if (!stats.isFile()) return failed('UNSUPPORTED_TYPE', 'The requested resource is not a file.')
     return succeeded({ path: realPath })
@@ -148,13 +179,13 @@ async function resolveRelativePathWithinRoot(
   }
 }
 
-function rootForSender(senderId: number): FileSystemResult<string> {
-  const rootPath = windowRoots.get(senderId)
-  return rootPath ? succeeded(rootPath) : failed('NO_ROOT_SELECTED', 'Select a root folder before accessing files.')
+function rootForSender(senderId: number): FileSystemResult<RootState> {
+  const root = windowRoots.get(senderId)
+  return root ? succeeded(root) : failed('NO_ROOT_SELECTED', 'Select a root folder before accessing files.')
 }
 
-async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<InitialMarkdownFile | null>> {
-  const fileArgument = process.argv.slice(1).find((argument) => argument.toLowerCase().endsWith('.md'))
+async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<InitialMarkdownFileState | null>> {
+  const fileArgument = process.argv.slice(1).find((argument) => isAbsolute(argument) && argument.toLowerCase().endsWith('.md'))
   if (!fileArgument) return succeeded(null)
 
   try {
@@ -170,8 +201,12 @@ async function initialMarkdownFileFromArguments(): Promise<FileSystemResult<Init
     if (!decoded.ok) return failed(decoded.code, decoded.message)
 
     const rootPath = await fs.realpath(dirname(filePath))
+    const rootStats = await fs.stat(rootPath)
     return succeeded({
       rootPath,
+      rootRealPath: rootPath,
+      rootDevice: rootStats.dev,
+      rootInode: rootStats.ino,
       filePath,
       name: filePath.split(/[\\/]/).filter(Boolean).pop() ?? filePath,
       content: decoded.value
@@ -200,16 +235,21 @@ function registerFileSystemHandlers(): void {
   ipcMain.handle('filesystem:select-root-folder', async (event): Promise<FileSystemResult<{ rootPath: string }>> => {
     const window = BrowserWindow.fromWebContents(event.sender)
     const dialogOptions: OpenDialogOptions = { properties: ['openDirectory'] }
-    const result = window
-      ? await dialog.showOpenDialog(window, dialogOptions)
-      : await dialog.showOpenDialog(dialogOptions)
-    if (result.canceled || result.filePaths.length === 0) return failed('INVALID_PATH', 'No folder was selected.')
+    let result
+    try {
+      result = window
+        ? await dialog.showOpenDialog(window, dialogOptions)
+        : await dialog.showOpenDialog(dialogOptions)
+    } catch (error) {
+      return errorResult(error, 'READ_FAILED', 'Unable to open the folder selection dialog.')
+    }
+    if (result.canceled || result.filePaths.length === 0) return failed('CANCELLED', 'Folder selection was cancelled.')
 
     try {
       const rootPath = await fs.realpath(result.filePaths[0])
       const stats = await fs.stat(rootPath)
       if (!stats.isDirectory()) return failed('NOT_A_DIRECTORY', 'The selected path is not a folder.')
-      windowRoots.set(event.sender.id, rootPath)
+      windowRoots.set(event.sender.id, { path: rootPath, realPath: rootPath, device: stats.dev, inode: stats.ino })
       return succeeded({ rootPath })
     } catch (error) {
       return errorResult(error, 'INVALID_PATH', 'The selected folder is invalid.')
@@ -219,7 +259,7 @@ function registerFileSystemHandlers(): void {
   ipcMain.handle('filesystem:list-directory', async (event, directoryPath?: string): Promise<FileSystemResult<DirectoryEntry[]>> => {
     const root = rootForSender(event.sender.id)
     if (!root.ok) return root
-    const target = await resolvePathWithinRoot(root.value, directoryPath ?? root.value)
+    const target = await resolvePathWithinRoot(root.value, directoryPath ?? root.value.path)
     if (!target.ok) return target
 
     try {
@@ -227,13 +267,11 @@ function registerFileSystemHandlers(): void {
       if (!stats.isDirectory()) return failed('NOT_A_DIRECTORY', 'The requested path is not a folder.')
       const entries = await fs.readdir(target.value, { withFileTypes: true })
       const visibleEntries: DirectoryEntry[] = []
-      let skippedUnsafeEntry = false
 
       for (const entry of entries) {
         const entryPath = resolve(target.value, entry.name)
         const resolvedEntry = await resolvePathWithinRoot(root.value, entryPath)
         if (!resolvedEntry.ok) {
-          skippedUnsafeEntry = true
           continue
         }
 
@@ -245,10 +283,11 @@ function registerFileSystemHandlers(): void {
         }
       }
 
-      visibleEntries.sort((left, right) => left.type.localeCompare(right.type) || left.name.localeCompare(right.name))
-      if (skippedUnsafeEntry) {
-        return failed('OUTSIDE_ROOT', 'Some folder entries were excluded because they resolve outside the selected root folder.')
-      }
+      visibleEntries.sort((left, right) => {
+        const leftRank = left.type === 'directory' ? 0 : 1
+        const rightRank = right.type === 'directory' ? 0 : 1
+        return leftRank - rightRank || left.name.localeCompare(right.name, undefined, { sensitivity: 'base' })
+      })
       return succeeded(visibleEntries)
     } catch (error) {
       return errorResult(error, 'READ_FAILED', 'Unable to list the requested folder.')
@@ -292,7 +331,9 @@ function registerFileSystemHandlers(): void {
   ipcMain.handle('filesystem:consume-initial-markdown-file', (event): FileSystemResult<InitialMarkdownFile | null> => {
     const initialFile = initialMarkdownFiles.get(event.sender.id) ?? succeeded(null)
     initialMarkdownFiles.delete(event.sender.id)
-    return initialFile
+    if (!initialFile.ok || !initialFile.value) return initialFile
+    const { rootPath, filePath, name, content } = initialFile.value
+    return succeeded({ rootPath, filePath, name, content })
   })
 }
 
@@ -314,7 +355,7 @@ async function loadWindowContent(window: BrowserWindow): Promise<void> {
   }
 }
 
-function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFile | null> = succeeded(null)): BrowserWindow {
+function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFileState | null> = succeeded(null)): BrowserWindow {
   const window = new BrowserWindow({
     width: 1200,
     height: 800,
@@ -333,7 +374,12 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
   window.setMenuBarVisibility(false)
   const webContentsId = window.webContents.id
   if (initialMarkdownResult.ok && initialMarkdownResult.value) {
-    windowRoots.set(webContentsId, initialMarkdownResult.value.rootPath)
+    windowRoots.set(webContentsId, {
+      path: initialMarkdownResult.value.rootPath,
+      realPath: initialMarkdownResult.value.rootRealPath,
+      device: initialMarkdownResult.value.rootDevice,
+      inode: initialMarkdownResult.value.rootInode
+    })
   }
   if (!initialMarkdownResult.ok || initialMarkdownResult.value) {
     initialMarkdownFiles.set(webContentsId, initialMarkdownResult)
