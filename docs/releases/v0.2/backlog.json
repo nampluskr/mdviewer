@@ -246,7 +246,7 @@
       "id": "phase-07",
       "order": 7,
       "title": "수동 Reload와 오류 복구",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-02", "phase-03", "phase-04", "phase-05", "phase-06"],
       "scope": [
         "Reload, Ctrl+R, F5의 단일 수동 Reload 동작 구성",

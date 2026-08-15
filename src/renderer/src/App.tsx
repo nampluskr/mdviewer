@@ -130,6 +130,7 @@ function App(): ReactElement {
   const tabButtonRefs = useRef(new Map<string, HTMLButtonElement>())
   const hasUserChangedState = useRef(false)
   const directoryLoadVersion = useRef(0)
+  const reloadVersion = useRef(0)
   const explorerEntryRefs = useRef(new Map<number, HTMLButtonElement>())
   const restoreExplorerFocus = useRef(false)
 
@@ -186,12 +187,81 @@ function App(): ReactElement {
     setContentFontScale((scale) => Math.min(200, Math.max(80, scale + amount)))
   }
 
+  const reloadCurrentState = async (): Promise<void> => {
+    if (!window.markdownBrowser || !rootPath || !currentDirectoryPath) return
+
+    const version = reloadVersion.current + 1
+    reloadVersion.current = version
+    const directoryPath = currentDirectoryPath
+    const activeTab = tabsRef.current.find((tab) => tab.id === activeTabIdRef.current) ?? null
+    setDirectory((current) => ({ ...current, error: null, loading: true }))
+
+    const directoryResult = await window.markdownBrowser.listDirectory(directoryPath)
+    if (reloadVersion.current !== version) return
+
+    if (directoryResult.ok) {
+      setDirectory({ entries: directoryResult.value, error: null, loading: false })
+      setFolderError(null)
+    } else if (directoryResult.error.code === 'ROOT_UNAVAILABLE') {
+      if (activeTab) {
+        setTabs((currentTabs) => currentTabs.map((tab) => (
+          tab.id === activeTab.id ? { ...tab, error: directoryResult.error.message } : tab
+        )))
+      }
+      setRootPath(null)
+      setCurrentDirectoryPath(null)
+      setDirectory({ entries: [], error: null, loading: false })
+      setFolderError(directoryResult.error.message)
+      return
+    } else if (directoryResult.error.code === 'NOT_FOUND' && !sameFilePath(directoryPath, rootPath, platform)) {
+      const rootResult = await window.markdownBrowser.listDirectory(rootPath)
+      if (reloadVersion.current !== version) return
+      if (rootResult.ok) {
+        setCurrentDirectoryPath(rootPath)
+        setDirectory({ entries: rootResult.value, error: null, loading: false })
+        setFolderError(`${directoryResult.error.message} Returned to the root folder.`)
+      } else if (rootResult.error.code === 'ROOT_UNAVAILABLE') {
+        setRootPath(null)
+        setCurrentDirectoryPath(null)
+        setDirectory({ entries: [], error: null, loading: false })
+        setFolderError(rootResult.error.message)
+        return
+      } else {
+        setDirectory((current) => ({ ...current, error: rootResult.error.message, loading: false }))
+        setFolderError(rootResult.error.message)
+      }
+    } else {
+      setDirectory((current) => ({ ...current, error: directoryResult.error.message, loading: false }))
+      setFolderError(directoryResult.error.message)
+    }
+
+    if (!activeTab?.filePath) return
+    const fileResult = await window.markdownBrowser.readFile(activeTab.filePath)
+    if (reloadVersion.current !== version) return
+    setTabs((currentTabs) => currentTabs.map((tab) => {
+      if (tab.id !== activeTab.id) return tab
+      if (!fileResult.ok) return { ...tab, error: fileResult.error.message }
+      return {
+        ...tab,
+        content: fileResult.value.content,
+        error: null,
+        kind: fileResult.value.kind,
+        language: fileResult.value.language
+      }
+    }))
+  }
+
   useEffect(() => {
     const handleKeyDown = (event: KeyboardEvent): void => {
       if (event.key === 'F11') {
         event.preventDefault()
         setResizingExplorer(false)
         setFocusMode((enabled) => !enabled)
+        return
+      }
+      if (event.key === 'F5' || (event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'r')) {
+        event.preventDefault()
+        void reloadCurrentState()
         return
       }
       if (!event.ctrlKey || event.altKey || event.metaKey) return
@@ -215,7 +285,7 @@ function App(): ReactElement {
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [tabs, activeTabId])
+  }, [tabs, activeTabId, rootPath, currentDirectoryPath])
 
   const createEmptyTab = (): void => {
     hasUserChangedState.current = true
@@ -249,6 +319,7 @@ function App(): ReactElement {
   const loadDirectory = async (directoryPath: string): Promise<void> => {
     if (!window.markdownBrowser) return
 
+    reloadVersion.current += 1
     const loadVersion = directoryLoadVersion.current + 1
     directoryLoadVersion.current = loadVersion
     setDirectory((current) => ({ ...current, error: null, loading: true }))
@@ -473,7 +544,7 @@ function App(): ReactElement {
           <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" onKeyDown={handleExplorerKeyDown}>
             <div className="explorer-header">
               <button className="explorer-header-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder">Open</button>
-              <button className="explorer-header-button" type="button" disabled aria-label="Reload current folder" title="Reload current folder">Reload</button>
+              <button className="explorer-header-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder">Reload</button>
             </div>
             {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
             {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse supported files.</p>}
