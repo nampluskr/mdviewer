@@ -157,7 +157,7 @@
       "id": "phase-03",
       "order": 3,
       "title": "탭과 파일 열기 규칙",
-      "status": "pending",
+      "status": "completed",
       "dependsOn": ["phase-01"],
       "scope": [
         "탭 없는 초기 화면과 +, Ctrl+T 기반 빈 탭 생성",

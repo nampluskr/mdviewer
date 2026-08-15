@@ -33,7 +33,7 @@
 | FR-14 | 탭 | 여러 파일을 탭으로 열고 전환·닫기할 수 있다. `Ctrl+T`로 새 빈 탭을 만들고, `Ctrl+Tab` 및 `Ctrl+Shift+Tab`으로 다음·이전 탭으로 이동한다. | Must |
 | FR-15 | 탭 | 탭이 없는 초기 상태와 마지막 탭을 닫은 상태에서는 빈 화면을 표시한다. 빈 화면에서는 `+` 버튼으로 새 빈 탭을 만들 수 있다. | Must |
 | FR-16 | 탭 | `Tab`은 다음 화면 컨트롤로 키보드 포커스를 이동하며, 문서 탭 전환에는 사용하지 않는다. | Must |
-| FR-17 | 파일 열기 | Explorer에서 파일을 열 때 동일 파일이 이미 열린 경우 해당 탭으로 이동하고, 그렇지 않으면 새 탭으로 연다. 빈 탭이 활성화되어 있으면 그 탭에 파일을 연다. | Must |
+| FR-17 | 파일 열기 | Explorer에서 파일을 열 때 동일 파일이 이미 열린 경우 해당 탭으로 이동하고, 그렇지 않으면 새 탭으로 연다. 빈 탭이 활성화되어 있으면 그 탭에 파일을 연다. 읽기 실패는 기존 탭의 정상 내용을 변경하지 않는다. | Must |
 | FR-18 | Markdown | Markdown과 GitHub Flavored Markdown을 렌더링하고, 본문에는 GitHub Markdown과 유사한 읽기 스타일을 적용한다. | Must |
 | FR-19 | 코드 하이라이트 | Markdown 코드 블록과 코드 뷰어에서 Python, C++, TypeScript, JavaScript, JSON, PowerShell, YAML, TOML, Bash 문법 하이라이트를 지원한다. | Must |
 | FR-20 | 코드 복사 | Markdown 코드 블록과 코드 뷰어에 현재 내용을 클립보드로 복사하는 버튼을 제공한다. | Must |

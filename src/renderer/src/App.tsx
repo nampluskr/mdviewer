@@ -61,6 +61,10 @@ function parentDirectory(path: string): string | null {
   return normalized.slice(0, separatorIndex) || null
 }
 
+function sameFilePath(left: string | null, right: string, platform: NodeJS.Platform): boolean {
+  return left !== null && (platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right)
+}
+
 function openExternalLink(url: string): void {
   if (!window.markdownBrowser) return
   void window.markdownBrowser.openExternalLink(url)
@@ -81,6 +85,10 @@ function App(): ReactElement {
   const [initialLaunchPending, setInitialLaunchPending] = useState(true)
   const nextTabNumber = useRef(1)
   const fileLoadVersions = useRef(new Map<string, number>())
+  const tabsRef = useRef<Tab[]>([])
+  const activeTabIdRef = useRef<string | null>(null)
+  const tabButtonRefs = useRef(new Map<string, HTMLButtonElement>())
+  const hasUserChangedState = useRef(false)
   const directoryLoadVersion = useRef(0)
   const explorerEntryRefs = useRef(new Map<number, HTMLButtonElement>())
 
@@ -95,6 +103,7 @@ function App(): ReactElement {
           return
         }
         if (!result.value) return
+        if (hasUserChangedState.current) return
 
         const initialFile = result.value
         setRootPath(initialFile.rootPath)
@@ -113,7 +122,43 @@ function App(): ReactElement {
     void loadInitialMarkdownFile()
   }, [])
 
+  useEffect(() => {
+    tabsRef.current = tabs
+  }, [tabs])
+
+  useEffect(() => {
+    activeTabIdRef.current = activeTabId
+    if (activeTabId) tabButtonRefs.current.get(activeTabId)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }, [activeTabId])
+
+  const switchTab = (direction: 1 | -1): void => {
+    const currentTabs = tabsRef.current
+    if (currentTabs.length < 2) return
+    const currentIndex = currentTabs.findIndex((tab) => tab.id === activeTabIdRef.current)
+    const startIndex = currentIndex >= 0 ? currentIndex : 0
+    const nextIndex = (startIndex + direction + currentTabs.length) % currentTabs.length
+    setActiveTabId(currentTabs[nextIndex].id)
+    setFileError(null)
+  }
+
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent): void => {
+      if (!event.ctrlKey || event.altKey || event.metaKey) return
+      if (event.key.toLowerCase() === 't') {
+        event.preventDefault()
+        createEmptyTab()
+      } else if (event.key === 'Tab') {
+        event.preventDefault()
+        switchTab(event.shiftKey ? -1 : 1)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [tabs, activeTabId])
+
   const createEmptyTab = (): void => {
+    hasUserChangedState.current = true
     const id = `empty-${nextTabNumber.current}`
     nextTabNumber.current += 1
     setTabs((currentTabs) => [...currentTabs, { id, filePath: null, title: 'Untitled', content: '', error: null, kind: 'empty', language: null }])
@@ -122,9 +167,11 @@ function App(): ReactElement {
   }
 
   const closeTab = (tabId: string): void => {
-    const closingIndex = tabs.findIndex((tab) => tab.id === tabId)
-    const remainingTabs = tabs.filter((tab) => tab.id !== tabId)
-    if (tabId === activeTabId) {
+    const currentTabs = tabsRef.current
+    const closingIndex = currentTabs.findIndex((tab) => tab.id === tabId)
+    const remainingTabs = currentTabs.filter((tab) => tab.id !== tabId)
+    tabsRef.current = remainingTabs
+    if (tabId === activeTabIdRef.current) {
       const nextActiveTab = remainingTabs[closingIndex] ?? remainingTabs[closingIndex - 1] ?? null
       setActiveTabId(nextActiveTab?.id ?? null)
     }
@@ -156,6 +203,7 @@ function App(): ReactElement {
 
   const selectRootFolder = async (): Promise<void> => {
     if (!window.markdownBrowser) return
+    hasUserChangedState.current = true
 
     try {
       const result = await window.markdownBrowser.selectRootFolder()
@@ -182,36 +230,52 @@ function App(): ReactElement {
 
   const openFile = async (entry: DirectoryEntry): Promise<void> => {
     if (!window.markdownBrowser) return
-    if (!activeTabId) {
-      setFileError('Create or select a tab before opening a file.')
-      return
-    }
-
-    const targetTabId = activeTabId
-    const loadVersion = (fileLoadVersions.current.get(targetTabId) ?? 0) + 1
-    fileLoadVersions.current.set(targetTabId, loadVersion)
-    const alreadyOpen = tabs.find((tab) => tab.filePath === entry.path)
+    const alreadyOpen = tabsRef.current.find((tab) => sameFilePath(tab.filePath, entry.path, platform))
     if (alreadyOpen) {
       setFileError(null)
       setActiveTabId(alreadyOpen.id)
       return
     }
 
+    const targetTabId = activeTabId
+    const loadVersionKey = entry.path
+    const loadVersion = (fileLoadVersions.current.get(loadVersionKey) ?? 0) + 1
+    fileLoadVersions.current.set(loadVersionKey, loadVersion)
     setFileError(null)
     const result = await window.markdownBrowser.readFile(entry.path)
-    if (fileLoadVersions.current.get(targetTabId) !== loadVersion) return
+    if (fileLoadVersions.current.get(loadVersionKey) !== loadVersion) return
+    fileLoadVersions.current.delete(loadVersionKey)
     if (!result.ok) {
-      setTabs((currentTabs) => currentTabs.map((tab) => (
-        tab.id === targetTabId ? { ...tab, content: '', error: result.error.message } : tab
-      )))
+      setFileError(result.error.message)
       return
     }
 
-    setTabs((currentTabs) => currentTabs.map((tab) => (
-      tab.id === targetTabId
-        ? { ...tab, filePath: entry.path, title: entry.name, content: result.value.content, error: null, kind: result.value.kind, language: result.value.language }
-        : tab
-    )))
+    const existingAfterRead = tabsRef.current.find((tab) => sameFilePath(tab.filePath, entry.path, platform))
+    if (existingAfterRead) {
+      if (activeTabIdRef.current === targetTabId || activeTabIdRef.current === null) setActiveTabId(existingAfterRead.id)
+      return
+    }
+    const fileTab: Tab = {
+      id: `file-${nextTabNumber.current}`,
+      filePath: entry.path,
+      title: entry.name,
+      content: result.value.content,
+      error: null,
+      kind: result.value.kind,
+      language: result.value.language
+    }
+    nextTabNumber.current += 1
+
+    const targetIsEmpty = targetTabId !== null && tabsRef.current.some((tab) => tab.id === targetTabId && tab.kind === 'empty')
+    if (targetIsEmpty && targetTabId) {
+      setTabs((currentTabs) => currentTabs.map((tab) => (
+        tab.id === targetTabId ? { ...fileTab, id: targetTabId } : tab
+      )))
+      if (activeTabIdRef.current === targetTabId) setActiveTabId(targetTabId)
+    } else {
+      setTabs((currentTabs) => [...currentTabs, fileTab])
+      if (activeTabIdRef.current === targetTabId || activeTabIdRef.current === null) setActiveTabId(fileTab.id)
+    }
   }
 
   const activateExplorerEntry = (index: number): void => {
@@ -273,7 +337,7 @@ function App(): ReactElement {
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
             <div key={tab.id} className={tab.id === activeTabId ? 'tab is-active' : 'tab'}>
-              <button className="tab-button" type="button" role="tab" aria-selected={tab.id === activeTabId} onClick={() => activateTab(tab.id)}>
+              <button ref={(element) => { if (element) tabButtonRefs.current.set(tab.id, element); else tabButtonRefs.current.delete(tab.id) }} className="tab-button" type="button" role="tab" aria-selected={tab.id === activeTabId} onClick={() => activateTab(tab.id)}>
                 {tab.title}
               </button>
               <button className="tab-close-button" type="button" aria-label={`Close ${tab.title}`} onClick={() => closeTab(tab.id)}>×</button>
