@@ -54,6 +54,31 @@
   --scrollbar-thumb-hover: #484f58;
 }
 
+.app-shell[data-theme="dim"] {
+  --page-background: #24292e;
+  --surface: #2f363d;
+  --surface-hover: #3a4149;
+  --border: #4b535c;
+  --text: #d1d5da;
+  --muted-text: #959da5;
+  --selected-background: #1f6feb;
+  --selected-text: #ffffff;
+  --link: #79b8ff;
+  --code-background: #2f363d;
+  --code-surface: #2f363d;
+  --code-text: #d1d5da;
+  --error: #f97583;
+  --success: #85e89d;
+  --focus: #79b8ff;
+  --syntax-comment: #959da5;
+  --syntax-string: #9ecbff;
+  --syntax-number: #79b8ff;
+  --syntax-keyword: #f97583;
+  --syntax-property: #b392f0;
+  --scrollbar-thumb: #4b535c;
+  --scrollbar-thumb-hover: #5a6270;
+}
+
 * { box-sizing: border-box; }
 body { margin: 0; }
 .is-resizing, .is-resizing * { cursor: col-resize !important; user-select: none; }
@@ -77,7 +102,9 @@ body { margin: 0; }
   min-width: 1.5rem;
 }
 .new-tab-button:hover { background: var(--surface-hover); }
-.new-tab-button:focus-visible, .tab-button:focus-visible, .tab-close-button:focus-visible, .toolbar-button:focus-visible, .explorer-file:focus-visible, .explorer-directory:focus-visible, .explorer-parent:focus-visible, .explorer-header-button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.new-tab-button:focus-visible, .tab-button:focus-visible, .tab-close-button:focus-visible, .toolbar-button:focus-visible, .explorer-header-button:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
+.explorer-file:focus-visible, .explorer-directory:focus-visible, .explorer-parent:focus-visible, .explorer:focus-visible, .document-content:focus-visible { outline: none; }
+.explorer.is-empty:focus-visible, .explorer.is-empty .explorer-parent:focus-visible { outline: 2px solid var(--focus); outline-offset: -2px; }
 
 .tab-bar { display: flex; align-items: center; flex: 0 0 1.75rem; min-height: 1.75rem; border-bottom: 1px solid var(--border); background: var(--surface); }
 .tab-list { display: flex; flex: 1; min-width: 0; overflow-x: auto; }
@@ -122,7 +149,8 @@ body { margin: 0; }
 .entry-icon { flex: 0 0 auto; width: 14px; height: 14px; }
 .entry-name { overflow: hidden; min-width: 0; text-overflow: ellipsis; white-space: nowrap; }
 .explorer-file:hover, .explorer-directory:hover, .explorer-parent:hover { background: var(--surface-hover); color: var(--text); }
-.explorer-file.is-selected, .explorer-directory.is-selected { background: var(--selected-background); color: var(--selected-text); }
+.explorer-file.is-selected, .explorer-directory.is-selected { background: var(--surface-hover); color: var(--text); }
+.explorer.is-focused .explorer-file.is-selected, .explorer.is-focused .explorer-directory.is-selected { background: var(--selected-background); color: var(--selected-text); }
 .explorer-parent:disabled { color: var(--muted-text); cursor: not-allowed; }
 .explorer-status, .explorer-error { margin: .75rem 0; font-size: .875rem; }
 .explorer-status { color: var(--muted-text); }

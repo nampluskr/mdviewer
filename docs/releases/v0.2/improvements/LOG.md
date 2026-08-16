@@ -423,3 +423,137 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 남은 위험: 탐색기 행 상하 padding을 `.1rem`(1.6px)까지 줄여 행 높이가 약 20px 아래로 좁아졌다. I003 후속 반영에서 한 차례 다뤘던 WCAG 2.2 24×24px 클릭 대상 권장 기준보다 작아지는 트레이드오프가 있으며, 사용자가 "좀더 좁게"라는 명시적 요청과 함께 이번 항목의 검증 생략을 요청해 그대로 반영함. 실제 사용 중 클릭이 어렵다고 느껴지면 별도 항목으로 조정 가능.
 - 사용자 확인/피드백: 사용자가 "승인"으로 확인함.
 - 상태: 확정
+
+---
+
+## I012. Tab 포커스 재제한, 탐색기 키보드 조작(방향키/Enter/Backspace), 3단계 테마, Zoom 아이콘 2건
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. Tab으로 탐색기 영역과 뷰어 영역만 이동하도록 다시 강하게 제한
+  2. 탐색기 영역 키보드 조작: 상하 화살표로 선택 이동, Enter로 폴더 진입/파일 열기, Backspace로 상위 폴더 이동
+  3. 테마를 화이트/다크 2단계에서 화이트/그레이(Dimmed)/다크 3단계로 확장
+  4. 탭바의 테마 버튼 앞에 Zoom Out/Zoom In 아이콘 버튼 2개 추가
+- 구현 전 확인 사항: 1번을 I010 수준(탐색기·뷰어 2곳만)으로 되돌리면 Open Folder 버튼이 Tab에서 완전히 빠져, I010 1차 Codex 검증에서 지적됐던 "마우스 없이는 폴더 자체를 열 수 없는" 문제가 재발함. 사용자에게 대응 방식을 확인한 결과 "Ctrl+O 단축키 추가" 방식으로 확정(Reload는 기존 F5/Ctrl+R로 이미 충분, `.md` 필터는 단축키 없이 마우스 전용으로 남기기로 함).
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`:
+    - 전역 키보드 핸들러(`handleKeyDown`)에 `Ctrl+O` 추가 — Open Folder 버튼과 동일한 `selectRootFolder()`를 호출.
+    - 탐색기 헤더의 `.md` 필터/Open Folder/Reload 버튼 세 곳에 `tabIndex={-1}`을 다시 지정해, 앱 전체에서 `Tab`이 멈추는 지점을 탐색기 `<aside>`와 `.document-content` 두 곳으로만 유지. Open/Reload 버튼의 `aria-label`/`title`에 `(Ctrl+O)`/`(F5)` 단축키 안내를 추가.
+    - `handleExplorerKeyDown`의 상위 폴더 이동 조건을 `event.key === 'ArrowLeft'` 단독에서 `event.key === 'ArrowLeft' || event.key === 'Backspace'`로 확장 — 기존 ArrowUp/ArrowDown(선택 이동)·ArrowRight/Enter(진입·열기) 로직은 변경 없이 그대로 유지.
+    - `theme` 상태 타입을 `'light' | 'dark'` → `'light' | 'dim' | 'dark'`로 확장하고, `light → dim → dark → light` 순서로 순환하는 `nextTheme()` 헬퍼 추가. 테마 버튼 클릭이 `setTheme(nextTheme)`(업데이트 함수를 그대로 전달)로 순환하도록 변경. `ThemeIcon`에 `dim` 전용 렌더링 분기(반원 채움 원) 추가.
+    - `ZoomOutIcon`/`ZoomInIcon` 신규 SVG 아이콘 컴포넌트 추가(새 의존성 없음). 탭바의 테마 버튼 앞에 두 아이콘 버튼을 추가, 기존 `adjustContentFontScale(-10)`/`adjustContentFontScale(10)`(Ctrl+-/Ctrl++ 단축키와 동일 함수)를 호출. 두 버튼 모두 기존 단축키가 있으므로 `tabIndex={-1}`.
+  - `src/renderer/src/styles.css`: `.app-shell[data-theme="dark"]` 블록과 동일한 구조로 `.app-shell[data-theme="dim"]` 블록 신규 추가(중간 톤 회색 팔레트: 배경 `#24292e`, 표면 `#2f363d`, 텍스트 `#d1d5da` 등). 기존 라이트/다크 팔레트는 변경하지 않음.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Minor 0건, Major 2건. `npm run typecheck` 통과 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 반박(수정 없음) | "`.document-content`의 `calc(1rem * var(--content-font-scale) / 100)`가 Chromium 140에서 도입된 CSS 타입 연산이라 이 프로젝트의 Electron 35.7.5(Chromium 134)에서는 무효화되어 Zoom 버튼·단축키가 동작하지 않는다"는 지적 → 반박: 해당 `calc()` 선언은 이번 변경과 무관하게 `phase-06`(커밋 `cc64451`, 이번 세션 훨씬 이전)부터 존재해 왔고, 이후 I001~I011 전 기간 동안 Ctrl+/Ctrl-·Ctrl+휠 확대축소 기능에 대한 어떠한 오류 보고도 없었다. `calc()`에서 커스텀 프로퍼티를 곱셈·나눗셈하는 문법은 CSS Custom Properties/Values and Units Level 3 표준 문법으로 Chromium에서 수년간 지원돼 왔으며, "Chromium 140 타입 연산" 같은 특정 버전 게이팅 기능이 아니다. 반대 벤더가 제시한 근거(Electron 릴리스 페이지, Chromium 140 릴리스 노트 일반 링크)도 이 구체적 주장을 직접 뒷받침하지 않아 모델의 환각으로 판단, 코드 수정 없이 반박으로 처리함. |
+  | Major | 1 | 처리 상태: 수용(사용자 사전 확정 트레이드오프) | "`.md` 필터·Open Folder·Reload가 모두 `tabIndex={-1}`이며, Open Folder(Ctrl+O)·Reload(F5)에는 단축키가 있지만 `.md` 필터에는 없어 키보드만으로는 켤 수 없다"는 지적 → 이는 본 항목 구현 전 사용자에게 명시적으로 확인한 선택("Ctrl+O 단축키 추가" 옵션 채택 시 `.md` 필터는 마우스 전용으로 남는다는 조건 포함)과 정확히 일치하는 이미 승인된 트레이드오프이므로 추가 수정 없이 그대로 유지. |
+  | Minor | 0 | 해당 없음 | - |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음, 두 Major 모두 반박 또는 사전 승인된 트레이드오프로 코드 수정 불필요). I012 항목의 반대 벤더 적대적 검증 실행은 1회로 종료(재실행 없이 최대 3회 제한 내).
+- 남은 위험: `.md` 필터를 키보드만으로 켤 수 없다는 점은 사용자가 이미 인지하고 승인한 트레이드오프. Zoom `calc()` 관련 지적은 반박했으나, 만약 실제 패키지 빌드에서 확대/축소가 동작하지 않는 것이 확인되면 별도 항목으로 재조사 필요.
+- 사용자 확인/피드백: 사용자가 재확인 중 두 가지 문제를 새로 보고함 — (1) 하위 폴더로 4단계까지만 이동됨, (2) 뷰어 영역에서 Tab을 누르면 코드블록 Copy 아이콘들을 순회함(탐색기·뷰어 2곳만 이동해야 함).
+- 상태: 재작업 필요 (아래 I013으로 처리)
+
+---
+
+## I013. 코드블록 Copy·마크다운 링크 Tab 누락 수정, 탐색기 포커스 유실로 인한 키보드 탐색 중단 수정
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 하위 폴더로 4단계까지 밖에 이동되지 않는 문제
+  2. 뷰어 영역에서 Tab을 누르면 문서 내 코드블록의 Copy 아이콘들을 순회함 — Tab은 탐색기·뷰어 두 영역만 오가야 함
+- 원인 분석 (구현자: Claude Code):
+  - 2번: I010에서 "Tab은 탐색기·뷰어 두 영역만" 규칙을 적용할 때 `App.tsx`의 요소들만 훑었고, `CodePanel.tsx`의 Copy 버튼과 `App.tsx`의 Markdown 링크(`a: ({ href, children }) => <a href={href} onClick={...}>`) 렌더러에는 `tabIndex`를 지정하지 않아 기본값(0)으로 남아 있었다. 문서 안의 코드블록·링크 개수만큼 Tab 정지 지점이 추가로 생기던 원인.
+  - 1번: 하위 폴더 이동 후 포커스를 복원하는 로직(`loadDirectory`의 `restoreExplorerFocus.current` 처리)이 `explorerEntryRefs.current.get(0)?.focus()`만 호출했는데, `explorerEntryRefs`는 `visibleEntries`(기본 `.md` 필터 적용 시 폴더+마크다운 파일만) 기준으로만 채워진다. 새로 이동한 폴더에 폴더도 마크다운 파일도 하나도 없으면(예: 코드 파일만 있는 폴더) 포커스를 옮길 대상이 없어 `.focus()`가 아예 호출되지 않고, 방금 언마운트된 이전 폴더의 포커스 엘리먼트는 사라지면서 포커스가 `document.body`로 떨어진다. 이후 `handleExplorerKeyDown`의 가드 조건(포커스가 `<aside>` 자신이거나 `.explorer-tree` 내부여야 함)을 만족하지 못해 화살표·Enter·Backspace가 전부 반응하지 않게 된다. 실제 폴더 구조상 4단계 근처에서 이 조건에 해당하는 폴더를 만났을 가능성이 높다.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/CodePanel.tsx`: Copy 버튼에 `tabIndex={-1}` 추가.
+  - `src/renderer/src/App.tsx`: Markdown 링크 `<a>` 렌더러에 `tabIndex={-1}` 추가(클릭 시 내부 `.md` 링크는 `openMarkdownLink`로, 외부 링크는 `openExternalLink`로 여는 기존 로직은 변경 없음).
+  - `src/renderer/src/App.tsx`: `parentButtonRef`(".." 상위 폴더 버튼)와 `explorerRef`(탐색기 `<aside>` 자신) 참조를 추가하고, 포커스 복원 로직을 `explorerEntryRefs.current.get(0)` → (비활성화 상태가 아닌) `parentButtonRef.current` → `explorerRef.current` 순서로 대체 지점을 찾도록 확장. 새 폴더에 표시할 항목이 전혀 없어도 최소한 `<aside>` 컨테이너까지는 포커스가 항상 남아, 이후 키보드 입력이 계속 반응하도록 함.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 2건, Minor 1건. `npm run typecheck` 통과 확인(테스트는 읽기 전용 샌드박스 권한 문제로 미실행, 별도로 에이전트가 직접 실행해 통과 확인). |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수용(사용자 사전 확정 요청) | "Copy 버튼·Markdown 링크가 `tabIndex={-1}`이 되어 키보드만으로는 활성화할 수 없다"는 지적 → 이번 항목 자체가 사용자의 명시적 요청("Tab으로는 오로지 탐색기영역과 뷰어영역만 왔다갔다 해야 함")을 구현한 것이라 의도된 동작. 코드 수정 없이 유지. |
+  | Major | 1 | 범위 밖(별도 항목 필요) | "`.document-content`의 `onWheel` 핸들러가 React의 passive wheel 리스너에서 `event.preventDefault()`를 호출해, Ctrl+휠 확대·축소 시 Chromium 기본 페이지 확대와 충돌할 수 있다"는 지적 → 이 코드는 이번 세션 이전(phase-06)부터 있던 기존 로직이며 이번 I013에서 요청받은 두 문제(4단계 이동 제한, Copy 아이콘 Tab 순회)와 무관해 이번 항목 범위 밖으로 판단, 수정하지 않음. 실제 문제가 확인되면 별도 항목으로 처리 필요.|
+  | Minor | 1 | 수정 | "포커스 복원이 `explorerEntryRefs.get(0)` 실패 시 상위 폴더 버튼으로 대체하지만, 그 버튼이 Root 폴더에서는 `disabled` 상태라 포커스를 받을 수 없어 같은 문제가 재발할 수 있다"는 지적(예: 하위 폴더에서 Root 목록이 비거나 오류가 나서 Backspace로 Root로 돌아온 경우) → `parentButtonRef.current.disabled` 여부를 확인해 비활성 상태면 건너뛰고 `explorerRef.current`(탐색기 컨테이너 자신)로 한 단계 더 대체하도록 수정. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Minor 수정 후 CLAUDE.md 규정상 재검증 의무는 없어 반대 벤더 재실행은 생략, typecheck·테스트·빌드로 직접 확인함. I013 항목의 반대 벤더 적대적 검증 실행은 1회로 종료(재실행 없이 최대 3회 제한 내).
+- 남은 위험: (1) 발견된 Ctrl+휠 페이지 확대 충돌 가능성은 phase-06부터 있던 기존 로직이라 이번 항목에서는 수정하지 않음 — 실제로 재현되면 별도 항목 필요. (2) 4단계 제한의 근본 원인으로 지목한 "빈 visibleEntries" 시나리오는 코드 추적으로 도출한 가장 유력한 원인이며 포커스 유실을 막는 방어 코드로 수정했으나, 사용자 환경에서 정확히 이 시나리오였는지는 재확인 필요.
+- 사용자 확인/피드백: 사용자가 재확인 후 4가지 추가 요청 — (1) Tab 전환 시 표시되는 포커스 테두리를 없애고 탐색기의 선택 표시로 대체, (2) 탐색기 선택 항목의 파란 테두리 제거, (3) 4단계 키보드 탐색이 여전히 안 됨(재현 경로 제공), (4) 탐색기에 Home/End 키 추가.
+- 상태: 재작업 필요 (아래 I014로 처리)
+
+---
+
+## I014. 4단계 키보드 탐색 재수정(로딩 중 키 입력 가드), Home/End 추가, 포커스 아웃라인을 선택 표시로 대체
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. Tab으로 탐색기·뷰어 전환 시 표시되는 포커스 테두리 제거, 탐색기의 "현재 선택" 표시로 대체
+  2. 탐색기 선택 항목의 파란 테두리(outline) 제거
+  3. `docs/releases/v0.2/improvements`(Root 기준 4단계) 등 깊은 폴더에서 키보드 탐색이 여전히 안 됨
+  4. 탐색기에서 Home(맨 처음)/End(맨 끝) 키 추가
+- 원인 재분석 (구현자: Claude Code, 3번): 사용자가 제시한 예시 경로(`docs → releases → v0.2 → improvements`)를 직접 확인한 결과 각 단계 폴더 모두 항목이 있어(I013에서 고친 "빈 폴더" 시나리오가 아님), I013의 수정만으로는 이 경로가 여전히 재현됨을 확인. 대신 유력한 원인으로, 이전 `loadDirectory()` IPC 호출이 끝나기 전에 다음 Enter/ArrowLeft/Backspace가 눌리면 `navigateToDirectory`가 아직 갱신되지 않은 `entry.path`/`currentDirectoryPath` 조합으로 실행되어 탐색 단계가 꼬이거나 건너뛸 수 있는 레이스 컨디션으로 판단(빠른 연속 키 입력일수록, 즉 더 깊이 들어갈수록 재현 확률이 높아짐).
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`:
+    - `handleExplorerKeyDown`에 `if (directory.loading) return` 가드를 추가해, 디렉터리 로딩 중에는 ArrowLeft/Backspace(상위 이동)·ArrowRight/Enter(진입·열기)를 무시하도록 함(ArrowUp/ArrowDown·Home/End 선택 이동은 로딩 중에도 계속 동작). `activateExplorerEntry`에도 동일 가드를 추가해 로딩 중 마우스 클릭으로 인한 동일 레이스도 함께 차단.
+    - `handleExplorerKeyDown`에 Home/End 분기 추가 — 기존 ArrowUp/ArrowDown과 동일한 패턴으로 `selectedEntryIndex`를 각각 0/`maximumIndex`로 설정하고 해당 항목에 포커스.
+    - `explorerHasFocus` 상태 추가, 탐색기 `<aside>`의 `onFocus`/`onBlur`(`relatedTarget`이 aside 내부가 아닐 때만 false로 전환)로 갱신. `visibleEntries.length === 0`일 때 `is-empty` 클래스도 함께 부여. `<aside>`의 className이 `explorer`/`is-focused`/`is-empty` 조합으로 구성됨.
+  - `src/renderer/src/styles.css`:
+    - `.explorer-file:focus-visible`/`.explorer-directory:focus-visible`/`.explorer-parent:focus-visible`/`.explorer:focus-visible`/`.document-content:focus-visible`의 outline을 `none`으로 변경(요청 1·2 반영).
+    - `.explorer-file.is-selected`/`.explorer-directory.is-selected`의 기본 강조색을 은은한 `var(--surface-hover)`/`var(--text)`로 낮추고, `.explorer.is-focused .explorer-file.is-selected`/`.explorer.is-focused .explorer-directory.is-selected`에서만 기존의 진한 강조색(`var(--selected-background)`/`var(--selected-text)`)을 적용 — 탐색기가 실제로 키보드 포커스를 가지고 있을 때만 선택 항목이 진하게 보이도록 해, outline 없이도 "지금 탐색기에 포커스가 있는지"를 구분할 수 있게 함.
+    - `.explorer.is-empty:focus-visible`, `.explorer.is-empty .explorer-parent:focus-visible`에 한해 outline을 다시 활성화 — 표시할 항목이 전혀 없어 강조할 대상이 없는 경우(빈 하위 폴더의 `..` 버튼, 빈 Root의 `<aside>` 자신)에만 예외적으로 테두리로 포커스 위치를 표시.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증 (재실행 포함 총 3회 — 이번 항목의 CLAUDE.md 허용 상한)
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Minor 0건, Major 2건. |
+  | 2 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | 1차 Major #1(".." 버튼 Enter 무반응) 해결 확인. `onFocus`/`onBlur` 판별 로직 정상 확인. Light/Dim/Dark 3개 테마 모두 선택 강조 대비비 WCAG AA(4.5:1) 이상 확인(4.56:1~13.55:1). 잔여 Major 1건(항목이 없는 상태에서는 여전히 포커스 표시가 전혀 없음) 재지적. |
+  | 3 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | `is-empty` 범위 한정 수정 확인. Critical 0 / Major 0 / Minor 0, 잔여 reportable finding 없음. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정(1차) | "빈 폴더 진입 후 포커스가 `..` 버튼으로 대체됐을 때 Enter를 눌러도 `activateExplorerEntry(0)`이 항목 없음으로 아무 동작을 하지 않아 상위 폴더로 못 돌아간다"는 지적 → Enter/ArrowRight 분기에서 대상이 `.explorer-parent`이면 `preventDefault()` 없이 즉시 반환해, 버튼의 native Enter-클릭 동작(기존 `onClick`의 상위 이동)이 그대로 실행되도록 수정. 2차 재검증에서 해결 확인. |
+  | Major | 1 | 수정(2차) | "탐색기·뷰어 아웃라인을 모두 없애면 항목이 없는 상태(빈 하위 폴더의 `..` 버튼, 빈 Root의 `<aside>` 자신)에서는 포커스 위치를 전혀 알 수 없다"는 지적 → 사용자에게 대응 방식을 확인해 "탐색기에 포커스 있을 때만 선택 항목 색을 달리함" 방식을 우선 적용했으나, 그것만으로는 항목 자체가 없는 경우를 못 덮는다는 재지적을 받아 `is-empty` 클래스로 범위를 한정해 그 경우에만 outline을 복원. 3차 재검증에서 해결 확인. |
+  | Minor | 0 | 해당 없음 | - |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). 두 Major 모두 CLAUDE.md 규정상 요구되는 재검증까지 수행해 해소를 확인했으며, 3회차(최종 허용 회차)에서 Critical/Major/Minor 0건으로 마무리.
+- 남은 위험: 3차 검토가 명시한 대로, `:focus-visible` 표시 여부는 Chromium의 입력 모달리티 판정에 최종적으로 의존하므로 실제 UI에서 사용자가 직접 확인하는 것이 가장 확실함. 4단계 키보드 탐색 문제의 근본 원인(로딩 중 레이스 컨디션)은 코드 추적을 통한 가장 유력한 가설로 수정했으며, 사용자가 제시한 정확한 재현 경로로 재확인 필요.
+- 사용자 확인/피드백: 사용자가 재확인 후 "4단계 키보드 탐색이 계속 안 된다"고 보고(`docs/releases/v0.2/improvements` 경로에서 키보드 이동·상위/하위 폴더 이동 모두 불가). Codex 검증 없이 Opus 모델로 원인 규명 요청.
+- 상태: 재작업 필요 (아래 I015로 처리)
+
+---
+
+## I015. 탐색기 키보드 탐색 불능의 실제 원인 3건 규명 및 수정
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: I013·I014에서 두 차례 수정했음에도 `docs/releases/v0.2/improvements` 경로에서 키보드 이동과 상위/하위 폴더 이동이 전혀 되지 않음. 반대 벤더(Codex) 검증 없이 Opus 모델 단독으로 원인을 확인할 것.
+- 원인 분석 (구현자: Claude Code / Opus): 코드 정밀 추적 결과, 서로 독립적인 결함 3개가 겹쳐 있었다. I013·I014의 수정이 빗나갔던 이유는 "빈 폴더" 가설(I013)과 "로딩 레이스" 가설(I014)이 모두 실제 원인이 아니었기 때문이다.
+  - **결함 A (근본 원인) — 포커스 복원이 React 커밋과 경쟁**: `loadDirectory()`가 새 목록을 그린 뒤 `window.setTimeout(() => explorerEntryRefs.current.get(0)?.focus(), 0)`으로 포커스를 복원했다. 그러나 `setTimeout(0)`(매크로태스크)과 React의 렌더 커밋(Scheduler의 MessageChannel 매크로태스크)은 실행 순서가 보장되지 않는다. 커밋 전에 콜백이 먼저 실행되면 `explorerEntryRefs`에는 **직전 폴더의 (곧 언마운트될) 버튼**이 들어 있어, 이미 DOM에서 분리된 노드에 `.focus()`를 호출하게 되고 이는 아무 효과가 없다. 그 결과 포커스가 `document.body`로 떨어진다. `handleExplorerKeyDown`은 탐색기 `<aside>`에 바인딩된 핸들러이므로, 포커스가 `<aside>` 바깥(body)에 있으면 **keydown 이벤트가 핸들러에 도달조차 하지 않는다.** 이후 모든 키(화살표·Enter·Backspace)가 완전히 무반응이 된다. 폴더 깊이가 깊어질수록(=연속 탐색이 빨라질수록) 이 경쟁에서 지는 빈도가 높아져 "4단계쯤에서 죽는다"는 증상으로 나타난다.
+  - **결함 B (증폭 요인) — 대상 가드가 헤더 버튼을 배제**: 핸들러 첫 줄의 가드가 `event.target`이 `.explorer` 자신이거나 `.explorer-tree` 내부일 것을 요구했다. 그런데 `.md` 필터·Open Folder·Reload·루트 이동 버튼은 `tabIndex={-1}`이어도 **마우스 클릭 시에는 DOM 포커스를 획득**한다. 따라서 이 버튼들을 한 번이라도 클릭하면 이후 탐색기 키보드 조작이 전부 차단됐다. 애초에 이 핸들러는 `<aside>`에 붙어 있어 도달하는 이벤트는 이미 탐색기 내부에서 발생한 것이므로, 이 가드는 불필요하면서 해롭기만 했다.
+  - **결함 C (I014에서 자초한 위험) — `directory.loading` 가드의 영구 정지 가능성**: I014에서 추가한 `if (directory.loading) return`은, `loadDirectory`/`reloadCurrentState`의 조기 반환 경로(`if (directoryLoadVersion.current !== loadVersion) return` 등)가 `loading: false`를 남기지 않고 빠져나갈 경우 `loading`이 `true`로 고착되면 상위/하위 이동이 영구히 차단된다. 이때 화살표 키는 가드보다 위에 있어 계속 "동작"하지만 눈에 띄는 변화가 없어, 사용자가 보고한 "이동도 안 되고 폴더 진입/복귀도 안 됨" 증상과 정확히 일치한다. 이 가드는 애초에 가설에 근거한 추측성 방어였고, 경쟁 상태는 이미 `directoryLoadVersion` 버전 카운터로 올바르게 처리되고 있었다.
+- 변경 내용 (구현자: Claude Code / Opus) — `src/renderer/src/App.tsx`:
+  - **A 수정**: `loadDirectory()` 안의 `setTimeout` 기반 포커스 복원을 제거하고, `directory` 상태를 의존성으로 하는 전용 `useEffect`로 옮겼다. `useEffect`는 DOM 커밋과 ref 부착이 모두 끝난 뒤 실행되므로 `explorerEntryRefs`가 항상 새 목록 기준으로 갱신되어 있다. 로딩 중간 렌더에서 조기 복원되지 않도록 `if (directory.loading || !restoreExplorerFocus.current) return` 가드를 두어, 데이터가 실제로 도착한 렌더에서만 복원한다. 대체 순서(`첫 항목 → 비활성 아닌 ".." 버튼 → <aside> 자신`)는 I013·I014에서 정한 그대로 유지.
+  - **B 수정**: 핸들러 첫 줄의 `event.target` 가드를 삭제. 이제 탐색기 영역 안 어디에 포커스가 있든(헤더 버튼 포함) 화살표·Home/End·Backspace가 동작한다.
+  - **B 후속 처리**: 가드를 없앤 대신 Enter/ArrowRight 분기에서, 대상이 항목 행이 아닌 `<button>`(즉 `..` 및 헤더 버튼)이면 `preventDefault()` 없이 반환해 해당 버튼의 native 클릭 동작이 그대로 실행되도록 했다. I014에서 `.explorer-parent`에 한정해 넣었던 예외를 일반화한 것으로, Reload/Open Folder 등에 포커스가 있을 때 Enter가 엉뚱하게 항목 열기로 가로채이는 것을 막는다.
+  - **C 수정**: `handleExplorerKeyDown`과 `activateExplorerEntry`에서 `directory.loading` 가드를 모두 제거.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증: 사용자 명시적 요청("코덱스 검증 없이 opus 모델만으로")에 따라 생략함.
+- 남은 위험: 결함 A는 타이밍 경쟁이라 재현이 확률적이었고, 이번 수정은 그 경쟁 자체를 제거(선언적 `useEffect`로 전환)해 구조적으로 차단한 것이다. 다만 실제 Electron 실행 환경에서 사용자가 제시한 경로로 재확인이 필요하다. 결함 B·C는 코드 경로가 명확해 재현 조건 없이도 제거가 타당하다. 이번 항목은 반대 벤더 검증을 생략했으므로, 이후 회귀가 발견되면 별도 항목에서 검증을 포함해 처리한다.
+- 사용자 확인/피드백: 사용자가 해당 경로(`docs/releases/v0.2/improvements`)에서 직접 재확인해 "제대로 동작하는 것을 확인했습니다"로 확인함.
+- 상태: 확정

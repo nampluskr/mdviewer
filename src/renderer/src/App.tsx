@@ -53,6 +53,12 @@ class MarkdownErrorBoundary extends Component<MarkdownErrorBoundaryProps, Markdo
   }
 }
 
+function nextTheme(theme: 'light' | 'dim' | 'dark'): 'light' | 'dim' | 'dark' {
+  if (theme === 'light') return 'dim'
+  if (theme === 'dim') return 'dark'
+  return 'light'
+}
+
 function fileName(path: string): string {
   return path.split(/[\\/]/).filter(Boolean).pop() ?? path
 }
@@ -197,11 +203,40 @@ function ReloadIcon(): ReactElement {
   )
 }
 
-function ThemeIcon({ theme }: { theme: 'light' | 'dark' }): ReactElement {
+function ZoomOutIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="10.2" y1="10.2" x2="14.2" y2="14.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="4.5" y1="6.8" x2="9.1" y2="6.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ZoomInIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="6.8" cy="6.8" r="4.6" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="10.2" y1="10.2" x2="14.2" y2="14.2" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="4.5" y1="6.8" x2="9.1" y2="6.8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+      <line x1="6.8" y1="4.5" x2="6.8" y2="9.1" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function ThemeIcon({ theme }: { theme: 'light' | 'dim' | 'dark' }): ReactElement {
   if (theme === 'dark') {
     return (
       <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
         <path d="M13.3 9.7A5.3 5.3 0 0 1 6.7 3a4.3 4.3 0 1 0 6.6 6.7z" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+  if (theme === 'dim') {
+    return (
+      <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" strokeWidth="1.3" />
+        <path d="M8 2.7a5.3 5.3 0 0 1 0 10.6z" fill="currentColor" stroke="none" />
       </svg>
     )
   }
@@ -267,7 +302,7 @@ function App(): ReactElement {
   const [currentDirectoryPath, setCurrentDirectoryPath] = useState<string | null>(null)
   const [explorerVisible, setExplorerVisible] = useState(true)
   const [explorerWidth, setExplorerWidth] = useState(192)
-  const [theme, setTheme] = useState<'light' | 'dark'>('light')
+  const [theme, setTheme] = useState<'light' | 'dim' | 'dark'>('light')
   const [contentFontScale, setContentFontScale] = useState(100)
   const [focusMode, setFocusMode] = useState(false)
   const [resizingExplorer, setResizingExplorer] = useState(false)
@@ -275,6 +310,7 @@ function App(): ReactElement {
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [directory, setDirectory] = useState<DirectoryState>({ entries: [], error: null, loading: false })
   const [selectedEntryIndex, setSelectedEntryIndex] = useState(0)
+  const [explorerHasFocus, setExplorerHasFocus] = useState(false)
   const [markdownOnly, setMarkdownOnly] = useState(true)
   const [folderError, setFolderError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
@@ -289,6 +325,8 @@ function App(): ReactElement {
   const directoryLoadVersion = useRef(0)
   const reloadVersion = useRef(0)
   const explorerEntryRefs = useRef(new Map<number, HTMLButtonElement>())
+  const parentButtonRef = useRef<HTMLButtonElement | null>(null)
+  const explorerRef = useRef<HTMLElement | null>(null)
   const restoreExplorerFocus = useRef(false)
 
   useEffect(() => {
@@ -329,6 +367,15 @@ function App(): ReactElement {
     activeTabIdRef.current = activeTabId
     if (activeTabId) tabButtonRefs.current.get(activeTabId)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
   }, [activeTabId])
+
+  // Restore Explorer focus only after the new listing is committed and its refs are attached.
+  useEffect(() => {
+    if (directory.loading || !restoreExplorerFocus.current) return
+    restoreExplorerFocus.current = false
+    const usableParentButton = parentButtonRef.current && !parentButtonRef.current.disabled ? parentButtonRef.current : null
+    const target = explorerEntryRefs.current.get(0) ?? usableParentButton ?? explorerRef.current
+    target?.focus()
+  }, [directory])
 
   const switchTab = (direction: 1 | -1): void => {
     const currentTabs = tabsRef.current
@@ -432,7 +479,10 @@ function App(): ReactElement {
         return
       }
       if (!event.ctrlKey || event.altKey || event.metaKey) return
-      if (event.key.toLowerCase() === 't') {
+      if (event.key.toLowerCase() === 'o') {
+        event.preventDefault()
+        void selectRootFolder()
+      } else if (event.key.toLowerCase() === 't') {
         event.preventDefault()
         createEmptyTab()
       } else if (event.key === 'Tab') {
@@ -496,10 +546,6 @@ function App(): ReactElement {
       ? { entries: result.value, error: null, loading: false }
       : { entries: [], error: result.error.message, loading: false })
     setSelectedEntryIndex(0)
-    if (restoreExplorerFocus.current) {
-      restoreExplorerFocus.current = false
-      window.setTimeout(() => explorerEntryRefs.current.get(0)?.focus(), 0)
-    }
     if (!result.ok) setFolderError(result.error.message)
   }
 
@@ -613,7 +659,8 @@ function App(): ReactElement {
 
   const handleExplorerKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
     if (!rootPath || !currentDirectoryPath) return
-    if (!(event.target instanceof HTMLElement) || !(event.target.classList.contains('explorer') || event.target.closest('.explorer-tree'))) return
+    // The handler is bound to the Explorer aside, so any event here already originates inside it.
+    const target = event.target instanceof HTMLElement ? event.target : null
     const maximumIndex = visibleEntries.length - 1
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       if (maximumIndex < 0) return
@@ -625,13 +672,23 @@ function App(): ReactElement {
       explorerEntryRefs.current.get(nextIndex)?.focus()
       return
     }
-    if (event.key === 'ArrowLeft' && !sameFilePath(currentDirectoryPath, rootPath, platform)) {
+    if (event.key === 'Home' || event.key === 'End') {
+      if (maximumIndex < 0) return
+      event.preventDefault()
+      const nextIndex = event.key === 'Home' ? 0 : maximumIndex
+      setSelectedEntryIndex(nextIndex)
+      explorerEntryRefs.current.get(nextIndex)?.focus()
+      return
+    }
+    if ((event.key === 'ArrowLeft' || event.key === 'Backspace') && !sameFilePath(currentDirectoryPath, rootPath, platform)) {
       event.preventDefault()
       const parent = parentDirectory(currentDirectoryPath)
       if (parent) navigateToDirectory(parent)
       return
     }
     if (event.key === 'ArrowRight' || event.key === 'Enter') {
+      // Let buttons that are not entry rows (".." and header controls) run their own click action.
+      if (target !== null && target.tagName === 'BUTTON' && !target.classList.contains('explorer-file') && !target.classList.contains('explorer-directory')) return
       event.preventDefault()
       activateExplorerEntry(selectedEntryIndex)
     }
@@ -696,20 +753,22 @@ function App(): ReactElement {
             </div>
           ))}
         </div>
-        <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-pressed={theme === 'dark'} aria-label={theme === 'light' ? 'Dark theme' : 'Light theme'} title={theme === 'light' ? 'Dark theme' : 'Light theme'} onClick={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}><ThemeIcon theme={theme} /></button>
+        <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-label="Zoom out (Ctrl+-)" title="Zoom out (Ctrl+-)" onClick={() => adjustContentFontScale(-10)}><ZoomOutIcon /></button>
+        <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-label="Zoom in (Ctrl++)" title="Zoom in (Ctrl++)" onClick={() => adjustContentFontScale(10)}><ZoomInIcon /></button>
+        <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-label={`Theme: ${theme}. Switch to ${nextTheme(theme)} theme`} title={`Theme: ${theme}. Switch to ${nextTheme(theme)} theme`} onClick={() => setTheme(nextTheme)}><ThemeIcon theme={theme} /></button>
         <button className="new-tab-button tab-add-button toolbar-icon-button" type="button" tabIndex={-1} onClick={createEmptyTab} aria-label="Create a new tab" title="Create a new tab"><PlusIcon /></button>
       </header>
       <section className="document-area" role="tabpanel">
         {explorerVisible ? (
           <>
-          <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" tabIndex={0} onKeyDown={handleExplorerKeyDown}>
+          <aside ref={explorerRef} className={`explorer${explorerHasFocus ? ' is-focused' : ''}${visibleEntries.length === 0 ? ' is-empty' : ''}`} style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" tabIndex={0} onKeyDown={handleExplorerKeyDown} onFocus={() => setExplorerHasFocus(true)} onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget as Node | null)) setExplorerHasFocus(false) }}>
             <div className="explorer-header">
-              <button className="explorer-header-button toolbar-icon-button" type="button" aria-pressed={markdownOnly} aria-label={markdownOnly ? 'Show all supported files' : 'Show Markdown files only'} title={markdownOnly ? 'Show all supported files' : 'Show Markdown files only'} onClick={() => { setMarkdownOnly((value) => !value); setSelectedEntryIndex(0) }}>
+              <button className="explorer-header-button toolbar-icon-button" type="button" tabIndex={-1} aria-pressed={markdownOnly} aria-label={markdownOnly ? 'Show all supported files' : 'Show Markdown files only'} title={markdownOnly ? 'Show all supported files' : 'Show Markdown files only'} onClick={() => { setMarkdownOnly((value) => !value); setSelectedEntryIndex(0) }}>
                 <MarkdownFilterIcon active={markdownOnly} />
               </button>
               <div className="explorer-header-actions">
-                <button className="explorer-header-button toolbar-icon-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder"><OpenFolderIcon /></button>
-                <button className="explorer-header-button toolbar-icon-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder"><ReloadIcon /></button>
+                <button className="explorer-header-button toolbar-icon-button" type="button" tabIndex={-1} onClick={() => void selectRootFolder()} aria-label="Open Folder (Ctrl+O)" title="Open Folder (Ctrl+O)"><OpenFolderIcon /></button>
+                <button className="explorer-header-button toolbar-icon-button" type="button" tabIndex={-1} disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder (F5)" title="Reload current folder (F5)"><ReloadIcon /></button>
               </div>
             </div>
             {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
@@ -728,7 +787,7 @@ function App(): ReactElement {
               <>
                 <ul className="explorer-tree" aria-label="Current folder contents">
                   <li>
-                    <button className="explorer-parent" type="button" tabIndex={-1} disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
+                    <button ref={parentButtonRef} className="explorer-parent" type="button" tabIndex={-1} disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
                       if (sameFilePath(currentDirectoryPath, rootPath, platform)) return
                       const parent = parentDirectory(currentDirectoryPath)
                       if (parent) navigateToDirectory(parent)
@@ -780,6 +839,7 @@ function App(): ReactElement {
                       a: ({ href, children }) => (
                         <a
                           href={href}
+                          tabIndex={-1}
                           onClick={(event) => {
                             event.preventDefault()
                             if (href) void openMarkdownLink(activeTab.filePath ?? '', href)

@@ -83,7 +83,7 @@ export function CodePanel({ content, language, label }: CodePanelProps): ReactEl
     <section className="code-panel">
       <div className="code-panel-toolbar">
         <span className="code-language">{displayLanguage ?? 'plain text'}</span>
-        <button className="copy-button toolbar-icon-button" type="button" onClick={() => void copy()} aria-label={`Copy ${label}`} title={`Copy ${label}`}><CopyIcon /></button>
+        <button className="copy-button toolbar-icon-button" type="button" tabIndex={-1} onClick={() => void copy()} aria-label={`Copy ${label}`} title={`Copy ${label}`}><CopyIcon /></button>
       </div>
       {copyStatus ? <p className={copyFailed ? 'document-error' : 'copy-status'} role={copyFailed ? 'alert' : 'status'}>{copyStatus}</p> : null}
       <pre><code>{highlightedCode(content, displayLanguage)}</code></pre>
