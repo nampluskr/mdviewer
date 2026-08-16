@@ -42,7 +42,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
-      "artifactName": "${productName}-${version}-Setup.${ext}"
+      "artifactName": "${productName}-v0.2-Setup.${ext}"
     },
     "fileAssociations": [
       {
