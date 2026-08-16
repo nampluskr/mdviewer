@@ -773,3 +773,37 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 남은 위험: 3차 검토가 명시한 대로, 예산 초과를 넘는 "그 줄"에 대한 매치 자체는 중단 전에 완료되어야 하므로(줄 원자 단위 처리) 병적으로 긴 단일 줄(줄 길이 상한 2만 자 이내)에서 정규식 계산 자체의 짧은 지연은 있을 수 있으나, 길이 상한으로 유계이며 보고할 수준은 아니라고 검토자가 명시함.
 - 사용자 확인/피드백: 사용자가 "정상 작동함을 확인했습니다"로 확인함.
 - 상태: 확정
+
+---
+
+## I024. 빈 탐색기 안내 문구 간소화, 상태바 앱 정보 표시, 버전 표기를 v{major}.{minor} 2단계로 통일
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 루트 폴더 미선택 시 탐색기에 표시되는 안내 문구를 간략히 해달라는 요청.
+  2. 상태바 오른쪽에 프로그램 이름/버전/날짜를 표시해달라는 요청.
+  3. 위 작업 도중 태그를 `v2.0`으로 잘못 요청했다가 `v0.2`로 정정, 이어서 이 프로젝트는 `docs/releases/v{major}.{minor}/` 관례에 맞춰 버전을 `v{major}.{minor}` 2단계로만 관리한다는 지침을 받아 상태바 표시와 설치 파일명, git 태그를 모두 이 규칙에 맞게 재조정.
+  4. 위 변경 전체에 대해 Codex CLI 적대적 검증(코드 오류 포함) 실행 및 로그 기록 요청.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: 빈 탐색기 문구를 "Select a folder to browse supported files."에서 "Open Folder (Ctrl+O)"로 변경. 상태바 footer를 `status-bar-file`(기존 파일 정보, 왼쪽)과 `status-bar-app`(신규, 오른쪽) 두 span으로 분리하고 `${__APP_NAME__} ${__APP_VERSION__} (${__BUILD_DATE__})` 형식으로 렌더링.
+  - `electron.vite.config.ts`: renderer 전용 Vite `define`으로 `__APP_NAME__`(package.json `build.productName`), `__APP_VERSION__`(package.json semver `version`에서 patch를 버리고 `v{major}.{minor}`로 파생), `__BUILD_DATE__`(빌드 시점 로컬 날짜, `YYYY-MM-DD`) 3개 컴파일타임 상수 주입.
+  - `src/shared/markdown-browser.d.ts`: 위 3개 전역 상수에 대한 `declare const` 타입 선언 추가.
+  - `src/renderer/src/styles.css`: `.markdown-content p, .markdown-content li` line-height를 1.3→1.4로 변경. `.status-bar`를 flex(`justify-content: space-between`)로 전환하고 `.status-bar-file`(ellipsis), `.status-bar-app`(축소 가능, ellipsis) 규칙 추가.
+  - `package.json`: electron-builder NSIS `artifactName`을 `${productName}-${version}-Setup.${ext}`(전체 semver 노출)에서 `${productName}-v0.2-Setup.${ext}`(고정 리터럴)로 변경. `"version": "0.2.0"` 필드 자체는 npm/electron-builder가 요구하는 3단계 semver 형식이라 유지하고, 화면·파일명 표시만 2단계로 파생/고정.
+  - git 태그: 잘못 생성했던 `v0.2.0` 태그를 로컬/원격에서 삭제하고 `v0.2` 태그를 커밋 `d37fd55`에 새로 생성해 원격에 푸시.
+  - `release/`의 설치 파일을 `Markdown Browser-v0.2-Setup.exe`로 재생성(`npm run package:win`)하고, 구 규칙(`0.1.0`, `0.2.0`)으로 만들어진 이전 설치 파일 2개 삭제.
+- 검증: `npm run typecheck`, `npm run build` 통과.
+- 반대 벤더 적대적 검증 (1회)
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 3건. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 3 | 2건 수정, 1건 수용 | ① "`__BUILD_DATE__`가 `toISOString()`으로 UTC 기준 날짜를 사용해, 양의 UTC 오프셋 시간대에서 자정 직후 빌드 시 하루 전 날짜가 표시될 수 있다" → `electron.vite.config.ts`에서 `getFullYear()/getMonth()/getDate()` 기반 로컬 날짜 조합으로 수정. ② "상태바 우측 앱 정보(`.status-bar-app`)가 `flex: 0 0 auto`로 축소되지 않아, 창이 매우 좁아지면 ellipsis 없이 그대로 잘릴 수 있다" → `flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis;`로 변경해 축소 시 말줄임 처리되도록 수정. ③ "설치 파일명의 `v0.2`가 `package.json`의 `version`과 별도로 하드코딩되어 있어, 다음 버전 업(`0.3.0` 등)이나 patch 릴리스(`0.2.1`) 시 수동으로 함께 갱신하지 않으면 파일명이 실제 버전과 어긋나거나 동일 파일명이 재사용돼 산출물을 덮어쓸 수 있다" → 이 프로젝트가 이미 `v{major}.{minor}` 2단계 수동 버전 관리를 문서 체계(`docs/releases/v{major}.{minor}/`)의 원칙으로 채택하고 있어 의도된 트레이드오프로 수용, 별도 코드 수정 없음. 다음 마이너 버전 업 시 `package.json`의 `artifactName`을 함께 갱신해야 함을 여기 기록으로 남김. |
+- Critical 수정 및 재검증: 해당 없음(Critical 0건).
+- 남은 위험: 다음 마이너 버전(`v0.3` 등)으로 넘어갈 때 `package.json`의 `build.nsis.artifactName` 리터럴을 수동으로 갱신해야 하며, 잊으면 설치 파일명이 실제 버전과 불일치할 수 있음(Minor ③, 의도된 수용 사항).
+- 사용자 확인/피드백: 사용자가 Codex 검증 실행과 로그 기록을 요청함(진행 중).
+- 상태: 확정

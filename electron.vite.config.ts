@@ -2,7 +2,8 @@ import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import react from '@vitejs/plugin-react'
 import pkg from './package.json'
 
-const buildDate = new Date().toISOString().slice(0, 10)
+const now = new Date()
+const buildDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 const [major, minor] = pkg.version.split('.')
 const displayVersion = `v${major}.${minor}`
 

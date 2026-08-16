@@ -161,7 +161,7 @@ body { margin: 0; }
 .document-content { flex: 1; min-width: 0; overflow: auto; padding: 2rem; font-size: calc(1rem * var(--content-font-scale, 90) / 100); }
 .status-bar { display: flex; flex: 0 0 1.75rem; align-items: center; justify-content: space-between; gap: .75rem; overflow: hidden; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted-text); font-family: "Cascadia Code", Consolas, monospace; font-size: .8125rem; line-height: 1.75rem; padding: 0 .75rem; }
 .status-bar-file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.status-bar-app { flex: 0 0 auto; white-space: nowrap; }
+.status-bar-app { flex: 0 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .document-status { color: var(--muted-text); }
 
 .markdown-content { max-width: 72rem; color: var(--text); line-height: 1.65; overflow-wrap: anywhere; }
