@@ -350,3 +350,53 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Major/Minor 수정 후 CLAUDE.md 규정상 재검증 의무가 없어 반대 벤더 재실행은 생략, typecheck·테스트 통과와 재빌드 후 스크린샷으로 직접 확인함.
 - 사용자 확인/피드백: 사용자가 "제대로 구현되었습니다"로 확인함.
 - 상태: 확정
+
+---
+
+## I010. 탭 여백·문서 제목·Tab 포커스 범위·스크롤바·Copy 버튼·탐색기 md 필터 6건
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 탭영역 파일제목의 앞/뒤 여백 제거해서 최대한 compact 하게
+  2. 문서영역의 파일명 제거 - 바로 H1 수준부터 보이게
+  3. Tab 으로 탐색기 영역과 뷰어 영역만 이동하게 조정
+  4. 탐색기 영역 / 뷰어영역의 스크롤바 스타일 통일 (좁게) - 다크 모드시 스크롤바 색 어둡게 조정
+  5. 뷰어 영역의 코드블럭시 복사 아이콘 배경/테두리 제거 - 코드블럭 테두리 통일
+  6. 탐색기 영역의 open | reload 아이콘은 우측 정렬, 추가로 좌측 맨 앞에 [v].md 체크박스 추가 - 기본은 선택으로 탐색기 영역에 md 파일로 보이게 하고, 체크박스 해제하면, 나머지 파일도 같이 보이게 함
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/styles.css`:
+    - `.tab-button`의 좌우 `padding`을 `0 1rem` → `0 .5rem`으로 축소.
+    - `.document-content > h1` 규칙 삭제(대상 요소 자체를 제거했으므로).
+    - `.explorer`와 `.document-content`가 `--scrollbar-thumb`/`--scrollbar-thumb-hover` CSS 변수를 공유하는 동일한 `scrollbar-width: thin` + `::-webkit-scrollbar` 규칙을 쓰도록 통합. Light 테마는 기존과 동일한 `var(--border)`/`#afb8c1`, Dark 테마는 기존 `var(--muted-text)`(밝은 회색) 대신 더 어두운 `#30363d`/`#484f58`를 `.app-shell[data-theme="dark"]`에 정의.
+    - `.copy-button`의 `border`/`background`를 제거해 다른 아이콘 전용 버튼과 동일하게 투명 배경으로 변경, hover만 `var(--surface-hover)`.
+    - `.code-panel pre`에 `border: 1px solid var(--border); border-top: 0;` 추가해 코드블록 툴바(위쪽 테두리)와 코드 영역(아래쪽 라운드)이 하나의 연속된 테두리를 이루도록 함.
+    - `.explorer-header`를 `justify-content: flex-end` → `space-between`으로 변경하고 `.explorer-header-actions`(Open/Reload를 담는 우측 그룹), `.explorer-filter`(체크박스+".md" 라벨, 좌측) 규칙 추가.
+  - `src/renderer/src/App.tsx`:
+    - `.document-content` 상단의 `<h1>{activeTab?.title}</h1>` 요소를 제거. 문서 영역은 이제 Markdown/코드/텍스트 내용 자체에서 바로 시작됨(빈 파일·에러·empty 탭 상태 메시지는 기존 그대로 유지).
+    - `markdownOnly` 상태(기본 `true`) 추가. `directory.entries`에서 `directory`/`markdown` 타입만 남긴 `visibleEntries` 파생값을 계산해 `activateExplorerEntry`, `handleExplorerKeyDown`의 `maximumIndex`, `explorerEntryRefs` 인덱싱, 탐색기 파일 목록 `.map` 전체가 `directory.entries` 대신 `visibleEntries`를 쓰도록 변경. 탐색기 헤더 좌측에 `.explorer-filter` 체크박스(`aria-label="Show Markdown files only"`)를 추가하고, 토글 시 `selectedEntryIndex`를 0으로 재설정. Open/Reload 버튼은 `.explorer-header-actions`로 묶어 우측에 배치.
+    - Tab 키 포커스 범위 축소: 탭바의 탐색기 토글/탭 제목/탭 닫기/테마/새 탭("+") 버튼과, 탐색기 내부의 루트 이동·상위 폴더(`..`)·파일·폴더 항목 버튼, 리사이저(`.explorer-resizer`)에 `tabIndex={-1}`을 지정해 일반 `Tab` 순서에서 제외(마우스 클릭, 그리고 파일·폴더 항목은 탐색기 컨테이너에 포커스가 있을 때 기존 방향키(`ArrowUp`/`ArrowDown`/`ArrowLeft`/`ArrowRight`/`Enter`)로 계속 접근 가능). 탐색기 `<aside>`와 문서 영역 `.document-content`에 `tabIndex={0}`을 추가해 `Tab`/`Shift+Tab`이 두 영역 사이를 이동하도록 함. `handleExplorerKeyDown`의 가드 조건을 `event.target.closest('.explorer-tree')` 단독에서 `event.target.classList.contains('explorer') || event.target.closest('.explorer-tree')`로 넓혀, `<aside>` 자체가 `Tab`으로 포커스된 직후에도 방향키 탐색이 바로 동작하도록 함.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Minor 0건, Major 1건. `npm run typecheck` 통과 확인(테스트는 읽기 전용 샌드박스에서 Vitest의 임시 디렉터리 생성 권한 문제로 실행 불가했으나 별도로 에이전트가 직접 `npm run test`/`npm run build`를 실행해 통과 확인함). |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정 | 탭바·탐색기의 거의 모든 조작 버튼에 `tabIndex={-1}`을 지정하면서 이를 대체할 키보드 경로가 전혀 없어, 마우스 없이 `Tab`/`Shift+Tab`/방향키/Enter만으로는 Open Folder 버튼에 영영 도달할 수 없고(=폴더를 열 수조차 없음), Reload·`.md` 필터도 마찬가지로 도달 불가능하다는 지적(재현: 폴더 미선택 상태로 실행 후 마우스 없이 Tab만으로 탐색 시 Open Folder에 포커스가 가지 않음) → 탐색기 헤더의 체크박스, Open, Reload 세 요소에서만 `tabIndex={-1}`을 제거해 기본 Tab 순서로 복귀시킴(탭바의 탐색기 토글·탭 제목·탭 닫기·테마·새 탭 버튼과 탐색기의 항목·루트·상위 폴더·리사이저는 사용자가 명시적으로 요청한 대로 마우스/방향키 전용으로 유지). |
+  | Minor | 0 | 해당 없음 | - |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Major 수정 후 CLAUDE.md 규정상 동일 벤더 재검증을 1회 재실행(2회차, 재실행 포함 총 2회로 최대 3회 제한 내). 재검증 결과: "Re-verification passed. The previous Major finding is resolved." — `.md` 체크박스와 Open Folder/Reload 버튼이 기본 Tab 순서로 정상 도달 가능함을 라인별로 확인, `handleExplorerKeyDown`이 `Tab` 키 자체를 가로채지 않음을 확인, 새로 도입된 회귀 없음을 확인. Critical/Major/Minor 잔여 지적 없음.
+- 남은 위험: 사용자의 명시적 요청대로 탭바의 탐색기 토글·테마·탭 닫기·새 탭 버튼과 탐색기의 루트/상위 폴더 이동·리사이저는 여전히 `Tab` 순서 밖에 있고 대응하는 키보드 단축키도 없어, 마우스 없이는 테마 전환·탭 닫기·탐색기 숨기기·리사이저 조작이 불가능하다(파일 목록 항목은 탐색기 컨테이너에 포커스된 뒤 방향키로 접근 가능하므로 제외). Codex는 이 부분도 원래 함께 지적했으나, Open Folder/Reload/필터만 도달 불가하면 앱 자체를 쓸 수 없는 차단 성격이라 판단해 그 세 곳만 최소 수정했고 나머지는 "Tab은 탐색기·뷰어 영역만 이동"이라는 사용자 요청을 그대로 유지함. 사용자가 이 트레이드오프에 동의하지 않으면 별도 항목으로 조정 가능.
+- 사용자 확인/피드백: 사용자가 "탭 제목 영역과 닫기 버튼의 앞/뒤 여백을 더 줄일 수 있는지" 추가 요청.
+- 상태: 확정 (아래 후속 반영으로 대체)
+
+### 추가 반영 (같은 I010 항목 내 후속 요청)
+
+- 요청 내용: 탭영역 파일명 제목 영역의 앞/뒤 여백을 더 줄이고, 탭 닫기 "×" 버튼의 앞/뒤 여백도 더 줄여달라는 요청.
+- 변경 내용 (구현자: Claude Code): `src/renderer/src/styles.css`에서 `.tab-button`의 `padding`을 `0 .5rem`(8px) → `0 .35rem`(5.6px)으로, `.tab-close-button`의 `padding`을 `0 .75rem`(12px) → `0 .35rem`(5.6px)으로 축소. `.tab-close-button`은 자체 `min-height`가 없어 부모 `.tab`(`align-items` 기본값 `stretch`)을 통해 `.tab-button`의 `min-height: 1.75rem`(28px)에 맞춰 늘어나므로, 좌우 여백만 줄여도 클릭 대상 높이(28px, WCAG 2.2 24px 기준 이상)는 그대로 유지됨.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증: 단순 padding 수치 조정(레이아웃·로직 변경 없음)이라 CLAUDE.md 규정상 별도 실행 의무는 없다고 판단해 생략함. I010 항목의 반대 벤더 적대적 검증 실행 횟수는 위 2회(1차 지적 + 2차 재검증)로 재실행 포함 최대 3회 제한 내에서 종료됨.
+- 사용자 확인/피드백: 사용자가 "승인"으로 확인함.
+- 상태: 확정

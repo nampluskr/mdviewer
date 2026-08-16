@@ -23,6 +23,8 @@
   --syntax-number: #0550ae;
   --syntax-keyword: #cf222e;
   --syntax-property: #8250df;
+  --scrollbar-thumb: var(--border);
+  --scrollbar-thumb-hover: #afb8c1;
   background: var(--page-background);
   color: var(--text);
 }
@@ -48,6 +50,8 @@
   --syntax-number: #79c0ff;
   --syntax-keyword: #d2a8ff;
   --syntax-property: #7ee787;
+  --scrollbar-thumb: #30363d;
+  --scrollbar-thumb-hover: #484f58;
 }
 
 * { box-sizing: border-box; }
@@ -78,10 +82,10 @@ body { margin: 0; }
 .tab-bar { display: flex; align-items: center; flex: 0 0 1.75rem; min-height: 1.75rem; border-bottom: 1px solid var(--border); background: var(--surface); }
 .tab-list { display: flex; flex: 1; min-width: 0; overflow-x: auto; }
 .tab { display: flex; border-right: 1px solid var(--border); }
-.tab-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font: inherit; font-size: .8125rem; max-width: 12rem; min-height: 1.75rem; overflow: hidden; padding: 0 1rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
+.tab-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font: inherit; font-size: .8125rem; max-width: 12rem; min-height: 1.75rem; overflow: hidden; padding: 0 .35rem; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
 .tab.is-active { background: var(--page-background); }
 .tab.is-active .tab-button { color: var(--text); font-weight: 600; }
-.tab-close-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font-size: 1.25rem; padding: 0 .75rem; }
+.tab-close-button { border: 0; background: transparent; color: var(--muted-text); cursor: pointer; font-size: 1.25rem; padding: 0 .35rem; }
 .tab-close-button:hover { color: var(--text); }
 .tab-add-button { margin: .125rem; }
 .toolbar-button { align-self: stretch; background: transparent; color: var(--muted-text); padding: 0 .75rem; }
@@ -91,12 +95,16 @@ body { margin: 0; }
 .toolbar-icon { flex: 0 0 auto; width: 14px; height: 14px; }
 
 .document-area { display: flex; flex: 1; min-height: 0; }
-.explorer { flex: 0 0 17rem; min-width: 0; overflow: auto; background: var(--surface); padding: .5rem; scrollbar-width: thin; }
-.explorer::-webkit-scrollbar { width: 8px; }
-.explorer::-webkit-scrollbar-track { background: transparent; }
-.explorer::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
-.explorer::-webkit-scrollbar-thumb:hover { background: var(--muted-text); }
-.explorer-header { display: flex; gap: .25rem; justify-content: flex-end; margin-bottom: .5rem; }
+.explorer, .document-content { scrollbar-width: thin; scrollbar-color: var(--scrollbar-thumb) transparent; }
+.explorer::-webkit-scrollbar, .document-content::-webkit-scrollbar { width: 8px; }
+.explorer::-webkit-scrollbar-track, .document-content::-webkit-scrollbar-track { background: transparent; }
+.explorer::-webkit-scrollbar-thumb, .document-content::-webkit-scrollbar-thumb { background: var(--scrollbar-thumb); border-radius: 4px; }
+.explorer::-webkit-scrollbar-thumb:hover, .document-content::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+.explorer { flex: 0 0 17rem; min-width: 0; overflow: auto; background: var(--surface); padding: .5rem; }
+.explorer-header { display: flex; align-items: center; gap: .25rem; justify-content: space-between; margin-bottom: .5rem; }
+.explorer-header-actions { display: flex; gap: .25rem; }
+.explorer-filter { display: flex; align-items: center; gap: .3rem; color: var(--muted-text); cursor: pointer; font-size: .8125rem; }
+.explorer-filter input { accent-color: var(--focus); cursor: pointer; margin: 0; }
 .explorer-header-button { border: 0; border-radius: 4px; background: transparent; color: var(--muted-text); cursor: pointer; font: inherit; font-size: .8125rem; padding: .35rem .55rem; }
 .explorer-header-button.toolbar-icon-button { padding: .35rem .5rem; }
 .explorer-header-button:hover, .explorer-header-button:focus-visible { background: var(--surface-hover); }
@@ -123,7 +131,6 @@ body { margin: 0; }
 
 .document-content { flex: 1; min-width: 0; overflow: auto; padding: 2rem; font-size: calc(1rem * var(--content-font-scale, 100) / 100); }
 .status-bar { flex: 0 0 1.75rem; overflow: hidden; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted-text); font-family: "Cascadia Code", Consolas, monospace; font-size: .8125rem; line-height: 1.75rem; padding: 0 .75rem; text-overflow: ellipsis; white-space: nowrap; }
-.document-content > h1 { margin-top: 0; }
 .document-status { color: var(--muted-text); }
 
 .markdown-content { max-width: 72rem; color: var(--text); line-height: 1.65; overflow-wrap: anywhere; }
@@ -153,11 +160,11 @@ body { margin: 0; }
 .code-panel { max-width: 72rem; }
 .code-panel-toolbar { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--code-surface); color: var(--code-text); padding: .45rem .65rem; }
 .code-language { font-family: Consolas, "Courier New", monospace; font-size: .75rem; }
-.copy-button { border: 1px solid var(--border); border-radius: 4px; background: var(--surface-hover); color: var(--text); cursor: pointer; font: inherit; font-size: .8rem; padding: .25rem .55rem; }
-.copy-button:hover { background: var(--border); }
+.copy-button { border: 0; border-radius: 4px; background: transparent; color: var(--text); cursor: pointer; font: inherit; padding: .35rem .5rem; }
+.copy-button:hover { background: var(--surface-hover); }
 .copy-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .copy-status { color: var(--success); font-size: .875em; }
-.code-panel pre { margin: 0; max-width: 100%; overflow: auto; border-radius: 0 0 6px 6px; background: var(--code-surface); color: var(--code-text); padding: 1rem; }
+.code-panel pre { margin: 0; max-width: 100%; overflow: auto; border: 1px solid var(--border); border-top: 0; border-radius: 0 0 6px 6px; background: var(--code-surface); color: var(--code-text); padding: 1rem; }
 .code-panel code { font-family: "Cascadia Code", Consolas, monospace; font-size: .875em; }
 .syntax-comment { color: var(--syntax-comment); }
 .syntax-string { color: var(--syntax-string); }

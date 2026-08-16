@@ -258,6 +258,7 @@ function App(): ReactElement {
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
   const [directory, setDirectory] = useState<DirectoryState>({ entries: [], error: null, loading: false })
   const [selectedEntryIndex, setSelectedEntryIndex] = useState(0)
+  const [markdownOnly, setMarkdownOnly] = useState(true)
   const [folderError, setFolderError] = useState<string | null>(null)
   const [fileError, setFileError] = useState<string | null>(null)
   const [launchError, setLaunchError] = useState<string | null>(null)
@@ -582,8 +583,12 @@ function App(): ReactElement {
     await openFilePath(result.value.path, fileName(result.value.path))
   }
 
+  const visibleEntries = markdownOnly
+    ? directory.entries.filter((entry) => entry.type === 'directory' || entry.type === 'markdown')
+    : directory.entries
+
   const activateExplorerEntry = (index: number): void => {
-    const entry = directory.entries[index]
+    const entry = visibleEntries[index]
     if (!entry) return
     if (entry.type === 'directory') navigateToDirectory(entry.path)
     else void openFile(entry)
@@ -591,8 +596,8 @@ function App(): ReactElement {
 
   const handleExplorerKeyDown = (event: React.KeyboardEvent<HTMLElement>): void => {
     if (!rootPath || !currentDirectoryPath) return
-    if (!(event.target instanceof HTMLElement) || !event.target.closest('.explorer-tree')) return
-    const maximumIndex = directory.entries.length - 1
+    if (!(event.target instanceof HTMLElement) || !(event.target.classList.contains('explorer') || event.target.closest('.explorer-tree'))) return
+    const maximumIndex = visibleEntries.length - 1
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       if (maximumIndex < 0) return
       event.preventDefault()
@@ -661,34 +666,40 @@ function App(): ReactElement {
   return (
     <main className={`${resizingExplorer ? 'app-shell is-resizing' : 'app-shell'}${focusMode ? ' is-focus-mode' : ''}`} data-theme={theme}>
       <header className="tab-bar" aria-label="Open documents">
-        <button className="toolbar-button toolbar-icon-button" type="button" aria-pressed={explorerVisible} aria-label={explorerVisible ? 'Hide Explorer' : 'Show Explorer'} title={explorerVisible ? 'Hide Explorer' : 'Show Explorer'} onClick={() => setExplorerVisible((visible) => !visible)}>
+        <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-pressed={explorerVisible} aria-label={explorerVisible ? 'Hide Explorer' : 'Show Explorer'} title={explorerVisible ? 'Hide Explorer' : 'Show Explorer'} onClick={() => setExplorerVisible((visible) => !visible)}>
           <ExplorerToggleIcon visible={explorerVisible} />
         </button>
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
             <div key={tab.id} className={tab.id === activeTabId ? 'tab is-active' : 'tab'}>
-              <button ref={(element) => { if (element) tabButtonRefs.current.set(tab.id, element); else tabButtonRefs.current.delete(tab.id) }} className="tab-button" type="button" role="tab" aria-selected={tab.id === activeTabId} onClick={() => activateTab(tab.id)}>
+              <button ref={(element) => { if (element) tabButtonRefs.current.set(tab.id, element); else tabButtonRefs.current.delete(tab.id) }} className="tab-button" type="button" role="tab" tabIndex={-1} aria-selected={tab.id === activeTabId} onClick={() => activateTab(tab.id)}>
                 {tab.title}
               </button>
-              <button className="tab-close-button" type="button" aria-label={`Close ${tab.title}`} onClick={() => closeTab(tab.id)}>×</button>
+              <button className="tab-close-button" type="button" tabIndex={-1} aria-label={`Close ${tab.title}`} onClick={() => closeTab(tab.id)}>×</button>
             </div>
           ))}
         </div>
-        <button className="toolbar-button toolbar-icon-button" type="button" aria-pressed={theme === 'dark'} aria-label={theme === 'light' ? 'Dark theme' : 'Light theme'} title={theme === 'light' ? 'Dark theme' : 'Light theme'} onClick={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}><ThemeIcon theme={theme} /></button>
-        <button className="new-tab-button tab-add-button toolbar-icon-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab" title="Create a new tab"><PlusIcon /></button>
+        <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-pressed={theme === 'dark'} aria-label={theme === 'light' ? 'Dark theme' : 'Light theme'} title={theme === 'light' ? 'Dark theme' : 'Light theme'} onClick={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}><ThemeIcon theme={theme} /></button>
+        <button className="new-tab-button tab-add-button toolbar-icon-button" type="button" tabIndex={-1} onClick={createEmptyTab} aria-label="Create a new tab" title="Create a new tab"><PlusIcon /></button>
       </header>
       <section className="document-area" role="tabpanel">
         {explorerVisible ? (
           <>
-          <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" onKeyDown={handleExplorerKeyDown}>
+          <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" tabIndex={0} onKeyDown={handleExplorerKeyDown}>
             <div className="explorer-header">
-              <button className="explorer-header-button toolbar-icon-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder"><OpenFolderIcon /></button>
-              <button className="explorer-header-button toolbar-icon-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder"><ReloadIcon /></button>
+              <label className="explorer-filter" title="Show Markdown files only">
+                <input type="checkbox" checked={markdownOnly} onChange={() => { setMarkdownOnly((value) => !value); setSelectedEntryIndex(0) }} aria-label="Show Markdown files only" />
+                .md
+              </label>
+              <div className="explorer-header-actions">
+                <button className="explorer-header-button toolbar-icon-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder"><OpenFolderIcon /></button>
+                <button className="explorer-header-button toolbar-icon-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder"><ReloadIcon /></button>
+              </div>
             </div>
             {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
             {rootPath ? (
               <p className="root-name" title={rootPath}>
-                <button className="root-home-button" type="button" disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => navigateToDirectory(rootPath)} aria-label="Go to root folder" title="Go to root folder">
+                <button className="root-home-button" type="button" tabIndex={-1} disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => navigateToDirectory(rootPath)} aria-label="Go to root folder" title="Go to root folder">
                   <RootHomeIcon />
                 </button>
                 <span className="root-name-text">{fileName(rootPath)}</span>
@@ -701,18 +712,19 @@ function App(): ReactElement {
               <>
                 <ul className="explorer-tree" aria-label="Current folder contents">
                   <li>
-                    <button className="explorer-parent" type="button" disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
+                    <button className="explorer-parent" type="button" tabIndex={-1} disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
                       if (sameFilePath(currentDirectoryPath, rootPath, platform)) return
                       const parent = parentDirectory(currentDirectoryPath)
                       if (parent) navigateToDirectory(parent)
                     }}>..</button>
                   </li>
-                  {directory.entries.map((entry, index) => (
+                  {visibleEntries.map((entry, index) => (
                     <li key={entry.path}>
                       <button
                         ref={(element) => { if (element) explorerEntryRefs.current.set(index, element); else explorerEntryRefs.current.delete(index) }}
                         className={`${entry.type === 'directory' ? 'explorer-directory' : 'explorer-file'}${index === selectedEntryIndex ? ' is-selected' : ''}`}
                         type="button"
+                        tabIndex={-1}
                         onFocus={() => setSelectedEntryIndex(index)}
                         onClick={() => activateExplorerEntry(index)}
                       >
@@ -727,14 +739,13 @@ function App(): ReactElement {
               </>
             ) : null}
           </aside>
-          <div className="explorer-resizer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" aria-valuemin={192} aria-valuemax={Math.floor(window.innerWidth * 0.45)} aria-valuenow={explorerWidth} tabIndex={0} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); adjustExplorerWidth(event.key === 'ArrowLeft' ? -16 : 16) } }} onPointerDown={startExplorerResize} onPointerMove={resizeExplorer} onPointerUp={stopExplorerResize} onPointerCancel={stopExplorerResize} />
+          <div className="explorer-resizer" role="separator" aria-label="Resize Explorer" aria-orientation="vertical" aria-valuemin={192} aria-valuemax={Math.floor(window.innerWidth * 0.45)} aria-valuenow={explorerWidth} tabIndex={-1} onKeyDown={(event) => { if (event.key === 'ArrowLeft' || event.key === 'ArrowRight') { event.preventDefault(); adjustExplorerWidth(event.key === 'ArrowLeft' ? -16 : 16) } }} onPointerDown={startExplorerResize} onPointerMove={resizeExplorer} onPointerUp={stopExplorerResize} onPointerCancel={stopExplorerResize} />
           </>
         ) : null}
-        <div className="document-content" style={{ '--content-font-scale': contentFontScale } as React.CSSProperties} onWheel={handleContentWheel}>
+        <div className="document-content" tabIndex={0} style={{ '--content-font-scale': contentFontScale } as React.CSSProperties} onWheel={handleContentWheel}>
           {tabs.length === 0 && initialLaunchPending ? <p className="document-status">Opening Markdown file...</p> : null}
           {tabs.length === 0 && launchError ? <p className="document-error" role="alert">{launchError}</p> : null}
           {fileError ? <p className="document-error" role="alert">{fileError}</p> : null}
-          <h1>{activeTab?.title}</h1>
           {activeTab?.error ? <p className="document-error" role="alert">{activeTab.error}</p> : activeTab?.filePath ? (
             activeTab.content.trim().length > 0 && activeTab.kind === 'markdown' ? (
               <article className="markdown-content">
