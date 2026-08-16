@@ -156,7 +156,7 @@ body { margin: 0; }
 .explorer-status { color: var(--muted-text); }
 .explorer-error, .document-error { color: var(--error); }
 
-.document-content { flex: 1; min-width: 0; overflow: auto; padding: 2rem; font-size: calc(1rem * var(--content-font-scale, 100) / 100); }
+.document-content { flex: 1; min-width: 0; overflow: auto; padding: 2rem; font-size: calc(1rem * var(--content-font-scale, 90) / 100); }
 .status-bar { flex: 0 0 1.75rem; overflow: hidden; border-top: 1px solid var(--border); background: var(--surface); color: var(--muted-text); font-family: "Cascadia Code", Consolas, monospace; font-size: .8125rem; line-height: 1.75rem; padding: 0 .75rem; text-overflow: ellipsis; white-space: nowrap; }
 .document-status { color: var(--muted-text); }
 
@@ -191,7 +191,7 @@ body { margin: 0; }
 .copy-button:hover { background: var(--surface-hover); }
 .copy-button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
 .copy-status { color: var(--success); font-size: .875em; }
-.code-panel pre { margin: 0; max-width: 100%; overflow: auto; border: 1px solid var(--border); border-top: 0; border-radius: 0 0 6px 6px; background: var(--code-surface); color: var(--code-text); padding: 1rem; }
+.code-panel pre { margin: 0; max-width: 100%; overflow: auto; border: 1px solid var(--border); border-top: 0; border-radius: 0 0 6px 6px; background: var(--code-surface); color: var(--code-text); line-height: 1.5; padding: 1rem; }
 .code-panel code { font-family: "Cascadia Code", "D2Coding", Consolas, "Malgun Gothic", monospace; font-size: .875em; }
 .syntax-comment { color: var(--syntax-comment); }
 .syntax-string { color: var(--syntax-string); }

@@ -53,6 +53,8 @@ class MarkdownErrorBoundary extends Component<MarkdownErrorBoundaryProps, Markdo
   }
 }
 
+const DEFAULT_CONTENT_FONT_SCALE = 90
+
 function nextTheme(theme: 'light' | 'dim' | 'dark'): 'light' | 'dim' | 'dark' {
   if (theme === 'light') return 'dim'
   if (theme === 'dim') return 'dark'
@@ -303,7 +305,7 @@ function App(): ReactElement {
   const [explorerVisible, setExplorerVisible] = useState(true)
   const [explorerWidth, setExplorerWidth] = useState(192)
   const [theme, setTheme] = useState<'light' | 'dim' | 'dark'>('light')
-  const [contentFontScale, setContentFontScale] = useState(100)
+  const [contentFontScale, setContentFontScale] = useState(DEFAULT_CONTENT_FONT_SCALE)
   const [focusMode, setFocusMode] = useState(false)
   const [resizingExplorer, setResizingExplorer] = useState(false)
   const [tabs, setTabs] = useState<Tab[]>([])
@@ -473,6 +475,11 @@ function App(): ReactElement {
         setFocusMode((enabled) => !enabled)
         return
       }
+      if (event.key === 'Escape' && focusMode) {
+        event.preventDefault()
+        setFocusMode(false)
+        return
+      }
       if (event.key === 'F5' || (event.ctrlKey && !event.altKey && !event.metaKey && event.key.toLowerCase() === 'r')) {
         event.preventDefault()
         void reloadCurrentState()
@@ -485,6 +492,9 @@ function App(): ReactElement {
       } else if (event.key.toLowerCase() === 't') {
         event.preventDefault()
         createEmptyTab()
+      } else if (event.key.toLowerCase() === 'w') {
+        event.preventDefault()
+        if (activeTabIdRef.current) closeTab(activeTabIdRef.current)
       } else if (event.key === 'Tab') {
         event.preventDefault()
         switchTab(event.shiftKey ? -1 : 1)
@@ -496,13 +506,22 @@ function App(): ReactElement {
         adjustContentFontScale(-10)
       } else if (event.key === '0') {
         event.preventDefault()
-        setContentFontScale(100)
+        setContentFontScale(DEFAULT_CONTENT_FONT_SCALE)
+      } else if (event.key === '1') {
+        event.preventDefault()
+        setTheme('light')
+      } else if (event.key === '2') {
+        event.preventDefault()
+        setTheme('dim')
+      } else if (event.key === '3') {
+        event.preventDefault()
+        setTheme('dark')
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [tabs, activeTabId, rootPath, currentDirectoryPath])
+  }, [tabs, activeTabId, rootPath, currentDirectoryPath, focusMode])
 
   const createEmptyTab = (): void => {
     hasUserChangedState.current = true

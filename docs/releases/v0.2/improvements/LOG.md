@@ -557,3 +557,66 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 남은 위험: 결함 A는 타이밍 경쟁이라 재현이 확률적이었고, 이번 수정은 그 경쟁 자체를 제거(선언적 `useEffect`로 전환)해 구조적으로 차단한 것이다. 다만 실제 Electron 실행 환경에서 사용자가 제시한 경로로 재확인이 필요하다. 결함 B·C는 코드 경로가 명확해 재현 조건 없이도 제거가 타당하다. 이번 항목은 반대 벤더 검증을 생략했으므로, 이후 회귀가 발견되면 별도 항목에서 검증을 포함해 처리한다.
 - 사용자 확인/피드백: 사용자가 해당 경로(`docs/releases/v0.2/improvements`)에서 직접 재확인해 "제대로 동작하는 것을 확인했습니다"로 확인함.
 - 상태: 확정
+
+---
+
+## I016. 코드블록 줄간격 통일, README 단축키 표 추가
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 마크다운 영역 코드블록의 줄간격이 너무 넓음. 다른 코드 파일(코드 뷰어)과 왜 다른지 확인 요청.
+  2. 루트 `README.md`에 단축키 목록을 테이블로 추가.
+- 원인 분석 (구현자: Claude Code): `.markdown-content { line-height: 1.65; }`가 마크다운 본문 전체(코드블록 포함)에 상속되는데, `.code-panel pre`/`.code-panel code`에는 자체 `line-height`가 없었다. 그 결과 마크다운 안의 코드블록은 `.markdown-content`의 `1.65`를 상속해 줄간격이 넓고, `.md`가 아닌 코드/텍스트 파일을 직접 여는 코드 뷰어(`.markdown-content` 바깥)는 이 상속을 받지 않아 브라우저 기본값(약 1.2)을 써서 서로 달랐다. 같은 `CodePanel` 컴포넌트인데 렌더링 위치에 따라 결과가 달라지는 문제였다.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/styles.css`: `.code-panel pre`에 `line-height: 1.5`를 명시해, 마크다운 내부·코드 뷰어 어디서 렌더링되든 코드블록 줄간격이 동일하게 고정되도록 함.
+  - `README.md`: "단축키" 섹션 신규 추가. `App.tsx`의 실제 `handleKeyDown`/`handleExplorerKeyDown` 구현을 기준으로 전역 단축키 표(Ctrl+O, F5/Ctrl+R, Ctrl+T, Ctrl+Tab/Ctrl+Shift+Tab, Ctrl++/Ctrl+-/Ctrl+0, Ctrl+휠, F11, Tab/Shift+Tab)와 탐색기 전용 키 표(↑/↓, Home/End, Enter/→, Backspace/←)를 작성.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증: 구현 시점에는 실행하지 않고 넘어갔음(절차 누락). 사용자에게 이 사실을 알리고, 다음 I017(단축키 4건) 작업 완료 후 이번 항목과 I018(기본 글자 크기)을 묶어 뒤늦게 Codex 검증을 실행함 — 아래 I018 섹션의 검증 결과 참조(코드블록 line-height 변경 포함).
+- 사용자 확인/피드백: 사용자가 "제대로 적용된 것을 확인했습니다"로 확인함(I017·I018과 함께 한 번에 확인).
+- 상태: 확정
+
+---
+
+## I017. VS Code 스타일 단축키 4건 추가(Ctrl+W, Esc, Ctrl+1/2/3, Alt+F4)
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. `Ctrl+W`: 현재 탭 닫기(VS Code와 동일)
+  2. `Esc`: 집중 보기 빠져나오기
+  3. `Ctrl+1`/`Ctrl+2`/`Ctrl+3`: 화이트/그레이/다크 테마로 직접 전환
+  4. `Alt+F4`: 창 닫기
+  - 사용자가 Codex 검증을 생략해달라고 명시적으로 요청함.
+- 구현 전 확인 (구현자: Claude Code): `Alt+F4`는 `src/main/index.ts`의 `BrowserWindow` 생성 옵션에 `frame: false`가 없는 표준 프레임 창이고 `globalShortcut`/메뉴 accelerator로 가로채는 코드도 없어, Windows OS가 기본으로 처리하는 동작이라 별도 구현이 필요 없음을 확인.
+- 변경 내용 (구현자: Claude Code) — `src/renderer/src/App.tsx`:
+  - 전역 `handleKeyDown`에 `Escape`(집중 보기일 때만 해제), `Ctrl+W`(`closeTab(activeTabIdRef.current)`), `Ctrl+1`/`Ctrl+2`/`Ctrl+3`(`setTheme('light'|'dim'|'dark')`) 분기 추가.
+  - 구현 중 발견한 버그: 이 `useEffect`의 의존성 배열이 `[tabs, activeTabId, rootPath, currentDirectoryPath]`였고 `focusMode`가 빠져 있어, `Esc` 분기가 `focusMode`를 직접 읽는 방식이라 stale closure로 오작동할 수 있었음(F11은 함수형 업데이트라 문제없었음) → 의존성 배열에 `focusMode` 추가로 수정.
+  - `README.md` 단축키 표에 `Ctrl+W`, `Ctrl+1`/`Ctrl+2`/`Ctrl+3`, `Esc`, `Alt+F4` 행 추가.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증: 사용자 명시적 요청에 따라 생략함.
+- 사용자 확인/피드백: 사용자가 "제대로 적용된 것을 확인했습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I018. 문서 기본 글자 크기 90%로 조정
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: 문서 글자 크기 100% 기본값을 한 단계(확대·축소 단위인 10%p) 낮춰 적용.
+- 변경 내용 (구현자: Claude Code) — `src/renderer/src/App.tsx`: 모듈 최상위에 `const DEFAULT_CONTENT_FONT_SCALE = 90` 상수를 추가하고, `contentFontScale`의 초기값(`useState(100)` → `useState(DEFAULT_CONTENT_FONT_SCALE)`)과 `Ctrl+0` 리셋값(`setContentFontScale(100)` → `setContentFontScale(DEFAULT_CONTENT_FONT_SCALE)`)을 모두 이 상수로 통일. `adjustContentFontScale`의 확대·축소 범위(80~200, 10 단위)는 변경하지 않음. `src/renderer/src/styles.css`의 `.document-content` `calc()` fallback 값도 100 → 90으로 함께 맞춤(이 fallback은 실제로는 항상 인라인 스타일로 값이 채워져 있어 평상시 쓰이지 않는 방어값).
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 0건. I016의 `.code-panel pre` `line-height: 1.5`가 `<code>`·문법 강조 `<span>`(색상만 지정, 줄 높이에 영향 없음)을 통해 안전하게 상속됨을 확인. `100`을 특별 취급하는 잔여 비교·퍼센트 라벨이 없음을 확인. 80~200 범위·10 단위 증분에서 90이 도달 불가능하거나 비대칭 상태를 만들지 않음을 확인. `calc()` fallback 값이 런타임 기본값과 일치함을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 0 | 해당 없음 | - |
+
+- Critical 수정 및 재검증: 해당 없음 (지적 없음).
+- 남은 위험: 이번 검증 요청 범위를 I016·I018(줄간격, 기본 글자 크기)로 한정했고, 같은 작업 트리에 함께 있던 I017(단축키 4건, 사용자 요청으로 검증 생략)은 이번 회차에서 별도로 검토되지 않았다는 점을 검토자가 스스로 명시함 — I017은 사용자 요청에 따른 의도된 생략이므로 별도 조치 없음.
+- 사용자 확인/피드백: 사용자가 "제대로 적용된 것을 확인했습니다"로 확인함.
+- 상태: 확정
