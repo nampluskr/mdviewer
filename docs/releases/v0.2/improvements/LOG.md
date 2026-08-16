@@ -248,3 +248,105 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - Critical 수정 및 재검증: 해당 없음 (지적 없음)
 - 사용자 확인/피드백: 사용자가 "제대로 잘 적용되었습니다"로 확인함.
 - 상태: 확정
+
+---
+
+## I007. 탭바 상단 버튼을 탐색기 헤더로 이동하고 아이콘 적용
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: 상단 탭바의 "Hide Explorer"/"Dark theme" 텍스트 버튼을 탐색기(Explorer) 헤더의 "Open | Reload"와 합쳐 "Open | Reload | Hide | Theme"로 이동하고 아이콘을 적용해달라는 요청.
+- 구현 전 확인한 문제 (구현자: Claude Code): "Hide Explorer" 버튼을 탐색기 헤더(`.explorer-header`, `explorerVisible`가 true일 때만 렌더링되는 `<aside>` 내부) 안으로 옮기면, 탐색기를 숨기는 순간 그 버튼 자체가 DOM에서 사라져 다시 켤 방법이 없어지는 문제가 있음을 발견해 사용자에게 보고. VS Code도 같은 이유로 사이드바 토글을 사이드바 안이 아니라 항상 바깥(액티비티 바)에 둔다는 점을 근거로 제시.
+- 사용자 확인 사항: Hide/Show 토글은 탭바 맨 앞에 아이콘 전용 버튼으로 유지, Open·Reload·Theme는 탐색기 헤더로 이동. (1차 반대 벤더 검증에서 Theme까지 탐색기 헤더로만 옮기면 탐색기를 숨겼을 때 테마를 바꿀 수 없는 동일 유형의 문제가 재발함을 발견 → 사용자가 Theme 아이콘은 탭바 오른쪽 원래 위치로 재배치하도록 확정. 탭 추가 "+" 버튼도 함께 아이콘화하기로 확정.)
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: `ExplorerToggleIcon`(패널 사각형+분할선, 보임 상태일 때 왼쪽 칸을 채움), `OpenFolderIcon`(폴더 윤곽선, `EntryIcon`의 디렉터리 아이콘과 동일 path 재사용), `ReloadIcon`(원형 화살표), `ThemeIcon`(라이트: 해, 다크: 초승달), `PlusIcon`(십자선) 신규 SVG 아이콘 컴포넌트 추가. 새 npm 의존성 없음.
+  - 탭바(`<header className="tab-bar">`) 맨 앞에 `ExplorerToggleIcon` 아이콘 버튼 추가(탐색기 표시 여부와 무관하게 항상 렌더링). 탭 목록 뒤에는 Theme 아이콘 버튼과 "+"(`PlusIcon`) 버튼을 원래 위치대로 유지.
+  - 탐색기 헤더(`.explorer-header`)의 "Open"/"Reload" 텍스트 버튼을 `OpenFolderIcon`/`ReloadIcon`으로 교체(각각 `toolbar-icon-button` 클래스 추가, 기존 `aria-label`/`title`은 그대로 유지).
+  - `src/renderer/src/styles.css`: `.toolbar-icon-button`(아이콘 중앙 정렬용 flex), `.toolbar-icon`(14×14px) 추가. `.new-tab-button.toolbar-icon-button`, `.explorer-header-button.toolbar-icon-button` 전용 규칙으로 각 버튼의 기존 크기·패딩과 충돌 없이 정확히 오버라이드되도록 함.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 1건, Minor 1건. 탐색기 토글 버튼이 `explorerVisible` 값과 무관하게 항상 렌더링됨(탭바가 조건부 렌더링 트리 밖에 있음)을 라인별로 확인. 4개 아이콘 전용 버튼 모두 `aria-label`/`title`이 일관되게 유지됨을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정 | Theme 버튼을 탐색기 헤더로만 옮기면 탐색기를 숨겼을 때 테마를 바꿀 방법이 없어진다는 지적(Hide Explorer와 동일한 유형의 회귀) → 사용자 확인 후 Theme 아이콘 버튼을 탭바 오른쪽(원래 위치)으로 재배치해 탐색기 표시 여부와 무관하게 항상 접근 가능하도록 수정. |
+  | Minor | 1 | 수정 | `.toolbar-icon-button`의 `padding: .35rem .5rem`이 이후에 선언된 `.explorer-header-button`의 `padding: .35rem .55rem`(동일 우선순위, 소스 순서상 나중)에 밀려 적용되지 않는 문제 → `.explorer-header-button.toolbar-icon-button` 전용 규칙을 추가해 확실히 오버라이드되도록 수정. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Major 수정은 CLAUDE.md 규정상 재검증 의무가 없어 반대 벤더 재실행 대신 실제 실행(탐색기 숨긴 상태에서 테마·"+"·탐색기 토글 버튼이 모두 탭바에 남아 있는지)을 스크린샷으로 직접 확인함.
+- 사용자 확인/피드백: 사용자가 "제대로 구현되었습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I008. 툴바·탐색기·상태바·탭 세부 조정 6건
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 탭추가 "+" 아이콘 배경 색깔 제거 - 다른 아이콘과 동일하게
+  2. 탐색기 영역: 폴더 열기/리로드 아이콘 우측 정렬
+  3. 탐색기 영역 스크롤바 추가 - 스크롤바 너비 좁게
+  4. 탐색기 영역 기본 너비: 최소값으로 적용
+  5. 상태바 파일 날짜 형식 YY-MM-DD로 변경
+  6. 탭 영역 파일 제목 - 기본은 파일명 크기로 하고, 일정 너비 이상 시 ... 추가
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/styles.css`:
+    - `.new-tab-button`의 `background: var(--surface-hover)` → `transparent`, hover 배경을 다른 아이콘 버튼과 동일한 `var(--surface-hover)`로 통일.
+    - `.explorer-header`에 `justify-content: flex-end` 추가.
+    - `.explorer`에 `scrollbar-width: thin`과 `::-webkit-scrollbar`류 규칙(폭 8px, 트랙 투명, thumb는 `var(--border)`/hover 시 `var(--muted-text)`) 추가.
+    - `.tab-button`의 고정 `min-width: 9rem` 제거, `max-width: 12rem`으로 대체 — 기본은 파일명 길이에 맞게 축소되고, 12rem을 넘으면 기존 `text-overflow: ellipsis`로 말줄임.
+  - `src/renderer/src/App.tsx`: `explorerWidth` 초기값을 `useState(272)` → `useState(192)`로 변경 — 리사이즈 로직의 `minimumWidth`(192) 상수와 동일한 값으로 맞춤(로직 자체는 미변경). `formatCreatedDate`를 `toLocaleDateString`(로케일 의존, 예: "2026. 08. 13.") 대신 `getFullYear`/`getMonth`/`getDate`로 직접 조합한 `YY-MM-DD` 문자열(예: "26-08-13")로 변경.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 0건. 지적 사항 없이 클린 패스. 날짜 포맷의 로컬 타임존 일관성, 2자리 연도 변환의 경계값(2005→05, 2099→99), Explorer 기본 너비와 리사이즈 최소값 일치, 탭 제목이 빈 문자열이어도 붕괴하지 않음을 모두 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 0 | 해당 없음 | - |
+
+- Critical 수정 및 재검증: 해당 없음 (지적 없음)
+- 사용자 확인/피드백: 사용자가 "제대로 구현되었습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I009. 날짜·경로 표시·루트 이동·창 제목·Copy 아이콘·전체 탭 갱신 7건
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 상태바 날짜 형식 YYYY-MM-DD로 변경 (I008의 YY-MM-DD에서 4자리 연도로 재변경)
+  2. 탐색기 영역 루트 폴더 아래 폴더 경로를 상대경로로 표시 (I006에서 제거했던 경로 표시를 상대경로로 재도입)
+  3. 탐색기 영역 루트 폴더명 앞에 아이콘 추가 — 하위 폴더 이동 중에도 루트로 바로 이동
+  4. 메인창 제목 옆에 버전+날짜 표시: "Markdown Browser v0.2 (2026-08-16)" → 사용자가 "오늘 날짜가 아니라 해당 버전의 배포일/설치파일 날짜"로 정정, `git log`에서 v0.2 마지막 Phase(phase-08) 커밋일 2026-08-15로 확정
+  5. 마크다운 코드 블록의 [Copy] 텍스트 버튼을 아이콘으로 변경
+  6. Reload 시 탐색기뿐 아니라 열려 있는 모든 탭의 문서 내용도 갱신 (기존은 활성 탭만 갱신 — `SPEC.md` 226-228행에 명시된 v0.2 확정 동작에서 벗어나는 사용자 요청 반영)
+  7. 탭 영역 파일 제목 길이를 파일명에 맞추고 초과 시 ...(이미 I008에서 구현 완료 — 재확인만 진행, 추가 변경 없음)
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`:
+    - `formatCreatedDate`에서 2자리로 자르던 `.slice(-2)` 제거, 4자리 연도(`YYYY-MM-DD`) 그대로 사용.
+    - `relativeDirectoryPath(rootPath, currentDirectoryPath, platform)` 헬퍼 추가 — `rootPath` 기준 상대경로 계산. `.current-directory` 표시를 Root 폴더를 보고 있지 않을 때만(하위 폴더 진입 시) 렌더링하도록 재도입.
+    - `RootHomeIcon` 신규 추가, `.root-name`을 flex 구조로 변경해 루트 아이콘 버튼(`root-home-button`, 클릭 시 `navigateToDirectory(rootPath)`, 루트에 있을 때 비활성화)과 `root-name-text`(파일명 span)로 분리.
+    - `reloadCurrentState`: 활성 탭만 다시 읽던 로직을 열린 파일 탭 전체(`tabsRef.current.filter(tab => tab.filePath !== null)`)를 `Promise.all`로 병렬 재조회하도록 변경.
+  - `src/renderer/index.html`: `<title>Markdown Browser</title>` → `<title>Markdown Browser v0.2 (2026-08-15)</title>`.
+  - `src/renderer/src/CodePanel.tsx`: `CopyIcon` 신규 추가, Copy 버튼 텍스트를 아이콘으로 교체(`aria-label`/`title` 유지).
+- 실제 실행 검증: 매크로/마우스 좌표 클릭 대신 `F5`/`Ctrl+Shift+Tab` 등 키보드 단축키로 정밀하게 재현 — README.md를 활성 탭으로 두고 별도 탭(`_reload_test_a.md`)을 백그라운드에 둔 채 파일을 외부에서 수정 후 `F5` 실행 → 비활성 탭으로 전환해 내용이 실제로 갱신됨을 확인(항목 6). 하위 폴더 진입 시 상대경로 표시, 루트 아이콘 클릭 시 즉시 루트로 복귀함을 스크린샷으로 확인(항목 2·3).
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 1건, Minor 1건. 날짜 형식·재검증 순서(`reloadVersion`)·탭 닫힘 경쟁 상태·기존 테스트 파일과의 충돌 없음을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수정 | `relativeDirectoryPath`가 `currentDirectoryPath`가 실제로 `rootPath` 하위인지 검증하지 않고 문자열 길이만큼 무조건 자르는 문제 — `rootPath="D:\foo"`, `currentDirectoryPath="D:\foobar\child"`이면 "bar\child"처럼 엉뚱하게 표시될 수 있음 → Windows 대소문자 무시 prefix 비교와 separator 경계 검증을 추가해, root 하위가 아니면 빈 문자열을 반환하도록 수정. |
+  | Minor | 1 | 수정 | 여러 탭을 한 `Promise.all`로 묶어 재조회하면 IPC 호출 하나만 reject해도 전체가 reject되어 모든 탭 갱신이 실패할 수 있는 문제 → 각 `readFile` 호출을 개별 `try/catch`로 감싸 한 파일의 예외가 다른 파일의 갱신을 막지 않도록 수정. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Major/Minor 수정 후 CLAUDE.md 규정상 재검증 의무가 없어 반대 벤더 재실행은 생략, typecheck·테스트 통과와 재빌드 후 스크린샷으로 직접 확인함.
+- 사용자 확인/피드백: 사용자가 "제대로 구현되었습니다"로 확인함.
+- 상태: 확정

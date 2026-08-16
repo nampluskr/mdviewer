@@ -23,6 +23,15 @@ const keywords = new Set([
   'and', 'as', 'async', 'await', 'break', 'case', 'catch', 'class', 'const', 'continue', 'def', 'default', 'delete', 'do', 'else', 'enum', 'except', 'export', 'extends', 'finally', 'for', 'from', 'function', 'if', 'import', 'in', 'interface', 'is', 'lambda', 'let', 'match', 'new', 'not', 'null', 'or', 'pass', 'private', 'protected', 'public', 'return', 'static', 'switch', 'throw', 'try', 'type', 'var', 'void', 'while', 'with', 'yield', 'true', 'false'
 ])
 
+function CopyIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="5.5" y="5.5" width="8" height="8" rx="1" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3.5 10.5v-7a1 1 0 0 1 1-1h7" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function normalizedLanguage(language: string | null): string | null {
   if (!language) return null
   const normalized = language.toLowerCase()
@@ -74,7 +83,7 @@ export function CodePanel({ content, language, label }: CodePanelProps): ReactEl
     <section className="code-panel">
       <div className="code-panel-toolbar">
         <span className="code-language">{displayLanguage ?? 'plain text'}</span>
-        <button className="copy-button" type="button" onClick={() => void copy()} aria-label={`Copy ${label}`}>Copy</button>
+        <button className="copy-button toolbar-icon-button" type="button" onClick={() => void copy()} aria-label={`Copy ${label}`} title={`Copy ${label}`}><CopyIcon /></button>
       </div>
       {copyStatus ? <p className={copyFailed ? 'document-error' : 'copy-status'} role={copyFailed ? 'alert' : 'status'}>{copyStatus}</p> : null}
       <pre><code>{highlightedCode(content, displayLanguage)}</code></pre>

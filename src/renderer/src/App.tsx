@@ -68,6 +68,16 @@ function sameFilePath(left: string | null, right: string, platform: NodeJS.Platf
   return left !== null && (platform === 'win32' ? left.toLowerCase() === right.toLowerCase() : left === right)
 }
 
+function relativeDirectoryPath(rootPath: string, currentDirectoryPath: string, platform: NodeJS.Platform): string {
+  const normalizedRoot = rootPath.replace(/[\\/]+$/, '')
+  const compareRoot = platform === 'win32' ? normalizedRoot.toLowerCase() : normalizedRoot
+  const compareCurrent = platform === 'win32' ? currentDirectoryPath.toLowerCase() : currentDirectoryPath
+  if (!compareCurrent.startsWith(compareRoot)) return ''
+  const rest = currentDirectoryPath.slice(normalizedRoot.length)
+  if (rest.length > 0 && !/^[\\/]/.test(rest)) return ''
+  return rest.replace(/^[\\/]+/, '')
+}
+
 function formatFileSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`
   const units = ['KB', 'MB', 'GB']
@@ -84,7 +94,10 @@ function formatCreatedDate(createdAtMs: number): string | null {
   if (!Number.isFinite(createdAtMs) || createdAtMs <= 0) return null
   const date = new Date(createdAtMs)
   if (Number.isNaN(date.getTime())) return null
-  return date.toLocaleDateString(undefined, { year: 'numeric', month: '2-digit', day: '2-digit' })
+  const year = String(date.getFullYear())
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${year}-${month}-${day}`
 }
 
 function formatStatusBar(tab: Tab | null): string {
@@ -118,6 +131,76 @@ function EntryIcon({ type }: { type: DirectoryEntry['type'] }): ReactElement {
           <line x1="4.5" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
         </>
       ) : null}
+    </svg>
+  )
+}
+
+function ExplorerToggleIcon({ visible }: { visible: boolean }): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="1.5" y="2.5" width="13" height="11" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <line x1="6" y1="2.5" x2="6" y2="13.5" stroke="currentColor" strokeWidth="1.3" />
+      {visible ? <rect x="1.5" y="2.5" width="4.5" height="11" rx="1" fill="currentColor" stroke="none" /> : null}
+    </svg>
+  )
+}
+
+function PlusIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <line x1="2" y1="8" x2="14" y2="8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function RootHomeIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M2 8.5 8 3l6 5.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M3.5 7.5V13a1 1 0 0 0 1 1h7a1 1 0 0 0 1-1V7.5" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function OpenFolderIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M1.5 4.2a1 1 0 0 1 1-1h3.1l1.1 1.3h6.8a1 1 0 0 1 1 1v6.3a1 1 0 0 1-1 1h-11a1 1 0 0 1-1-1V4.2z" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ReloadIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <path d="M13 5.2A5.5 5.5 0 1 0 13.8 9" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <path d="M13.2 2.3v3.2h-3.2" fill="none" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+function ThemeIcon({ theme }: { theme: 'light' | 'dark' }): ReactElement {
+  if (theme === 'dark') {
+    return (
+      <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+        <path d="M13.3 9.7A5.3 5.3 0 0 1 6.7 3a4.3 4.3 0 1 0 6.6 6.7z" fill="currentColor" stroke="none" />
+      </svg>
+    )
+  }
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
+        <line x1="8" y1="1.4" x2="8" y2="3" />
+        <line x1="8" y1="13" x2="8" y2="14.6" />
+        <line x1="1.4" y1="8" x2="3" y2="8" />
+        <line x1="13" y1="8" x2="14.6" y2="8" />
+        <line x1="3.3" y1="3.3" x2="4.4" y2="4.4" />
+        <line x1="11.6" y1="11.6" x2="12.7" y2="12.7" />
+        <line x1="3.3" y1="12.7" x2="4.4" y2="11.6" />
+        <line x1="11.6" y1="4.4" x2="12.7" y2="3.3" />
+      </g>
     </svg>
   )
 }
@@ -166,7 +249,7 @@ function App(): ReactElement {
   const [rootPath, setRootPath] = useState<string | null>(null)
   const [currentDirectoryPath, setCurrentDirectoryPath] = useState<string | null>(null)
   const [explorerVisible, setExplorerVisible] = useState(true)
-  const [explorerWidth, setExplorerWidth] = useState(272)
+  const [explorerWidth, setExplorerWidth] = useState(192)
   const [theme, setTheme] = useState<'light' | 'dark'>('light')
   const [contentFontScale, setContentFontScale] = useState(100)
   const [focusMode, setFocusMode] = useState(false)
@@ -291,11 +374,19 @@ function App(): ReactElement {
       setFolderError(directoryResult.error.message)
     }
 
-    if (!activeTab?.filePath) return
-    const fileResult = await window.markdownBrowser.readFile(activeTab.filePath)
+    const openFileTabs = tabsRef.current.filter((tab): tab is Tab & { filePath: string } => tab.filePath !== null)
+    if (openFileTabs.length === 0) return
+    const fileResults = await Promise.all(openFileTabs.map(async (tab) => {
+      try {
+        return { id: tab.id, result: await window.markdownBrowser.readFile(tab.filePath) }
+      } catch {
+        return { id: tab.id, result: { ok: false, error: { code: 'READ_FAILED', message: 'Unable to read the requested file.' } } as const }
+      }
+    }))
     if (reloadVersion.current !== version) return
     setTabs((currentTabs) => currentTabs.map((tab) => {
-      if (tab.id !== activeTab.id) return tab
+      const fileResult = fileResults.find((entry) => entry.id === tab.id)?.result
+      if (!fileResult) return tab
       if (!fileResult.ok) return { ...tab, error: fileResult.error.message, size: null, createdAtMs: null }
       return {
         ...tab,
@@ -570,6 +661,9 @@ function App(): ReactElement {
   return (
     <main className={`${resizingExplorer ? 'app-shell is-resizing' : 'app-shell'}${focusMode ? ' is-focus-mode' : ''}`} data-theme={theme}>
       <header className="tab-bar" aria-label="Open documents">
+        <button className="toolbar-button toolbar-icon-button" type="button" aria-pressed={explorerVisible} aria-label={explorerVisible ? 'Hide Explorer' : 'Show Explorer'} title={explorerVisible ? 'Hide Explorer' : 'Show Explorer'} onClick={() => setExplorerVisible((visible) => !visible)}>
+          <ExplorerToggleIcon visible={explorerVisible} />
+        </button>
         <div className="tab-list" role="tablist">
           {tabs.map((tab) => (
             <div key={tab.id} className={tab.id === activeTabId ? 'tab is-active' : 'tab'}>
@@ -580,24 +674,29 @@ function App(): ReactElement {
             </div>
           ))}
         </div>
-        <button className="toolbar-button" type="button" onClick={() => setExplorerVisible((visible) => !visible)}>
-          {explorerVisible ? 'Hide Explorer' : 'Show Explorer'}
-        </button>
-        <button className="toolbar-button" type="button" aria-pressed={theme === 'dark'} onClick={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}>
-          {theme === 'light' ? 'Dark theme' : 'Light theme'}
-        </button>
-        <button className="new-tab-button tab-add-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab">+</button>
+        <button className="toolbar-button toolbar-icon-button" type="button" aria-pressed={theme === 'dark'} aria-label={theme === 'light' ? 'Dark theme' : 'Light theme'} title={theme === 'light' ? 'Dark theme' : 'Light theme'} onClick={() => setTheme((currentTheme) => currentTheme === 'light' ? 'dark' : 'light')}><ThemeIcon theme={theme} /></button>
+        <button className="new-tab-button tab-add-button toolbar-icon-button" type="button" onClick={createEmptyTab} aria-label="Create a new tab" title="Create a new tab"><PlusIcon /></button>
       </header>
       <section className="document-area" role="tabpanel">
         {explorerVisible ? (
           <>
           <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" onKeyDown={handleExplorerKeyDown}>
             <div className="explorer-header">
-              <button className="explorer-header-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder">Open</button>
-              <button className="explorer-header-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder">Reload</button>
+              <button className="explorer-header-button toolbar-icon-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder"><OpenFolderIcon /></button>
+              <button className="explorer-header-button toolbar-icon-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder"><ReloadIcon /></button>
             </div>
             {folderError ? <p className="explorer-error" role="alert">{folderError}</p> : null}
-            {rootPath ? <p className="root-name" title={rootPath}>{fileName(rootPath)}</p> : <p className="explorer-status">Select a folder to browse supported files.</p>}
+            {rootPath ? (
+              <p className="root-name" title={rootPath}>
+                <button className="root-home-button" type="button" disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => navigateToDirectory(rootPath)} aria-label="Go to root folder" title="Go to root folder">
+                  <RootHomeIcon />
+                </button>
+                <span className="root-name-text">{fileName(rootPath)}</span>
+              </p>
+            ) : <p className="explorer-status">Select a folder to browse supported files.</p>}
+            {rootPath && currentDirectoryPath && !sameFilePath(currentDirectoryPath, rootPath, platform) ? (
+              <p className="current-directory" title={currentDirectoryPath}>{relativeDirectoryPath(rootPath, currentDirectoryPath, platform)}</p>
+            ) : null}
             {rootPath && currentDirectoryPath ? (
               <>
                 <ul className="explorer-tree" aria-label="Current folder contents">
