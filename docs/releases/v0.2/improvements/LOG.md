@@ -620,3 +620,37 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 남은 위험: 이번 검증 요청 범위를 I016·I018(줄간격, 기본 글자 크기)로 한정했고, 같은 작업 트리에 함께 있던 I017(단축키 4건, 사용자 요청으로 검증 생략)은 이번 회차에서 별도로 검토되지 않았다는 점을 검토자가 스스로 명시함 — I017은 사용자 요청에 따른 의도된 생략이므로 별도 조치 없음.
 - 사용자 확인/피드백: 사용자가 "제대로 적용된 것을 확인했습니다"로 확인함.
 - 상태: 확정
+
+---
+
+## I019. 집중 보기에서 프로그램 창 테두리(제목표시줄)까지 숨기기
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: 집중 보기 실행 시 문서 영역만 순수하게 보이도록, OS가 그리는 창 테두리(제목표시줄과 최소화/최대화/닫기 버튼)까지 없앨 수 있는지.
+- 계획 수립 (Plan Mode): 조사 결과 Electron `frame` 옵션은 창 생성 시점에만 정할 수 있어 "F11 때만 프레임 제거"를 하려면 창을 재생성해야 하고, 이는 열린 탭·문서 내용 등 렌더러 상태 전체 손실(약 150~250줄, `windowRoots` 보안 Map 재등록 포함)로 이어짐(A안). 대안으로 처음부터 `frame: false`로 만들고 앱이 직접 그리는 제목표시줄을 기존 `.tab-bar`에 넣어, 기존 `.app-shell.is-focus-mode .tab-bar { display: none; }` 규칙에 자연히 포함시켜 집중 보기에서만 사라지게 하는 B안(약 90~130줄, 창 재생성 없음)을 사용자와 함께 비교하고 채택. 계획 파일(`purrfect-crafting-flask.md`)로 승인받은 뒤 구현.
+- 변경 내용 (구현자: Claude Code):
+  - `src/main/index.ts`: `createWindow`의 `BrowserWindow` 옵션에 `frame: false` 추가. `registerWindowControlHandlers()` 신규 함수로 `window:minimize`/`window:toggle-maximize`/`window:close`/`window:is-maximized` 4개 IPC 핸들러 등록(모두 `BrowserWindow.fromWebContents(event.sender)`로 "이 창"만 확인, 렌더러가 창 식별자를 넘기지 않음). 창의 `maximize`/`unmaximize` 이벤트를 `window:maximize-changed`로 렌더러에 전달.
+  - `src/preload/index.ts`: `windowMinimize`/`windowToggleMaximize`/`windowClose`/`windowIsMaximized`/`onWindowMaximizeChange`(구독 해제 함수 반환, 이 앱 최초의 push-이벤트 API) 추가.
+  - `src/shared/markdown-browser.d.ts`: `MarkdownBrowserApi`에 위 5개 타입 추가.
+  - `src/renderer/src/App.tsx`: `MinimizeIcon`/`MaximizeIcon`/`RestoreIcon`/`CloseIcon` 신규 SVG 아이콘(기존 패턴 재사용). `isWindowMaximized` 상태를 마운트 시 `windowIsMaximized()`로 초기화하고 이후 `onWindowMaximizeChange` 구독으로만 갱신. `.tab-bar`의 "+" 버튼 뒤에 최소화/최대화-복원/닫기 버튼 3개 추가, 기존 탭바 아이콘들과 동일하게 `tabIndex={-1}`(마우스 전용, 확정된 "Tab은 탐색기·뷰어 영역만 이동" 규칙 유지).
+  - `src/renderer/src/styles.css`: `.tab-bar`에 `-webkit-app-region: drag`, `.tab-bar button`과 `.tab-list`에 `-webkit-app-region: no-drag`(탭 목록 스크롤 영역이 드래그에 막히지 않도록). `.window-close-button`에 hover 시 빨간 배경(Windows 관례).
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과. `npx electron .` 기동 확인(치명적 오류 없음).
+- 반대 벤더 적대적 검증 (main 프로세스 신뢰 경계·새 IPC 추가로 필수 대상 판단)
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | **보안 진단: 문제 없음** — `event.sender` 기반 창 확인은 스푸핑 불가능하며 각 창은 자기 자신만 제어 가능함을 확인, `frame: false`가 CSP·`will-navigate`·`setWindowOpenHandler`·contextIsolation·sandbox 중 어느 것도 약화시키지 않음을 확인, push 리스너가 창 간 누수되거나 언마운트 후에도 남지 않음을 확인. Critical 0건, Major 1건, Minor 3건. |
+  | 2 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Minor #2·#3 수정 재검증 — 두 항목 모두 해소 확인, 새로 발견된 문제 없음. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 1 | 수용(의도된 사양) | "집중 보기에서 탭바(유일한 드래그 영역+창 조작 버튼) 전체가 사라져 포인터로 창을 옮기거나 최소화·닫을 방법이 없다"는 지적 → 이는 "집중 보기는 문서만 순수하게 보이게" 해달라는 사용자 요청 그 자체이며, F11·Esc로 언제든 집중 보기를 빠져나올 수 있고 Alt+F4는 `frame: false`와 무관하게 OS 레벨에서 계속 동작함을 확인. 코드 수정 없이 의도된 동작으로 기록. |
+  | Minor | 1 | 수정 | "최대화 아이콘 초기값이 하드코딩된 `false`이고, 토글 버튼의 invoke 응답과 `maximize`/`unmaximize` 이벤트 알림이라는 두 경로가 상태를 경쟁적으로 갱신해 어긋날 수 있다"는 지적 → `window:toggle-maximize`가 더 이상 boolean을 반환하지 않도록 변경하고, 읽기 전용 조회용 `window:is-maximized` IPC·`windowIsMaximized()`를 신규 추가해 마운트 시 최초 상태를 조회하도록 함. 이후 상태 갱신은 `maximize`/`unmaximize` 이벤트 구독(`onWindowMaximizeChange`) 단일 경로로만 이뤄지도록 정리해 경쟁 자체를 제거. 2차 재검증에서 해소 확인. |
+  | Minor | 1 | 수정 | "탭 목록(`.tab-list`)이 넘칠 때 그 영역이 여전히 드래그 영역에 포함되어 있어, 스크롤바를 드래그하거나 빈 공간을 조작하면 스크롤 대신 창이 움직인다"는 지적(버튼 자식에만 `no-drag`가 적용돼 있었음) → `.tab-list` 자체에도 `-webkit-app-region: no-drag`를 추가해 스크롤 컨테이너 전체를 드래그 영역에서 제외. 2차 재검증에서 해소 확인. |
+  | Minor | 1 | 수용(기존 확정 규칙과 일치) | "새 창 조작 버튼 3개가 `tabIndex={-1}`이라 키보드만으로는 최소화·최대화·닫기를 실행할 수 없다"는 지적 → 이 앱은 이미 여러 항목(I010~I018)에 걸쳐 "Tab은 탐색기·뷰어 영역만 이동, 탭바 전체는 마우스 전용"으로 확정한 상태이며, 이 버튼들도 같은 규칙을 그대로 따른 것. 코드 수정 없이 유지. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Minor 2건 수정 후 동일 벤더로 2차 재검증까지 실행해 해소 확인(재실행 포함 총 2회, 최대 3회 제한 내).
+- 남은 위험: 없음. Major·나머지 Minor 1건은 모두 사용자 요청 또는 기존 확정 규칙과 일치하는 의도된 동작으로 확인됨.
+- 사용자 확인/피드백: 사용자가 "제대로 잘 실행됩니다. 사용자가 원하는 바 그대로 입니다."로 확인함.
+- 상태: 확정

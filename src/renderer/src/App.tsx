@@ -162,6 +162,40 @@ function PlusIcon(): ReactElement {
   )
 }
 
+function MinimizeIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <line x1="3" y1="11" x2="13" y2="11" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
+function MaximizeIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="3" y="3" width="10" height="10" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  )
+}
+
+function RestoreIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="5" y="3" width="8" height="8" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      <path d="M3 5v8h8" fill="none" stroke="currentColor" strokeWidth="1.3" />
+    </svg>
+  )
+}
+
+function CloseIcon(): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <line x1="3.5" y1="3.5" x2="12.5" y2="12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+      <line x1="12.5" y1="3.5" x2="3.5" y2="12.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 function RootHomeIcon(): ReactElement {
   return (
     <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -307,6 +341,7 @@ function App(): ReactElement {
   const [theme, setTheme] = useState<'light' | 'dim' | 'dark'>('light')
   const [contentFontScale, setContentFontScale] = useState(DEFAULT_CONTENT_FONT_SCALE)
   const [focusMode, setFocusMode] = useState(false)
+  const [isWindowMaximized, setIsWindowMaximized] = useState(false)
   const [resizingExplorer, setResizingExplorer] = useState(false)
   const [tabs, setTabs] = useState<Tab[]>([])
   const [activeTabId, setActiveTabId] = useState<string | null>(null)
@@ -364,6 +399,12 @@ function App(): ReactElement {
   useEffect(() => {
     tabsRef.current = tabs
   }, [tabs])
+
+  useEffect(() => {
+    if (!window.markdownBrowser) return
+    void window.markdownBrowser.windowIsMaximized().then(setIsWindowMaximized)
+    return window.markdownBrowser.onWindowMaximizeChange(setIsWindowMaximized)
+  }, [])
 
   useEffect(() => {
     activeTabIdRef.current = activeTabId
@@ -776,6 +817,9 @@ function App(): ReactElement {
         <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-label="Zoom in (Ctrl++)" title="Zoom in (Ctrl++)" onClick={() => adjustContentFontScale(10)}><ZoomInIcon /></button>
         <button className="toolbar-button toolbar-icon-button" type="button" tabIndex={-1} aria-label={`Theme: ${theme}. Switch to ${nextTheme(theme)} theme`} title={`Theme: ${theme}. Switch to ${nextTheme(theme)} theme`} onClick={() => setTheme(nextTheme)}><ThemeIcon theme={theme} /></button>
         <button className="new-tab-button tab-add-button toolbar-icon-button" type="button" tabIndex={-1} onClick={createEmptyTab} aria-label="Create a new tab" title="Create a new tab"><PlusIcon /></button>
+        <button className="toolbar-button toolbar-icon-button window-control-button" type="button" tabIndex={-1} aria-label="Minimize window" title="Minimize window" onClick={() => void window.markdownBrowser.windowMinimize()}><MinimizeIcon /></button>
+        <button className="toolbar-button toolbar-icon-button window-control-button" type="button" tabIndex={-1} aria-label={isWindowMaximized ? 'Restore window' : 'Maximize window'} title={isWindowMaximized ? 'Restore window' : 'Maximize window'} onClick={() => void window.markdownBrowser.windowToggleMaximize()}>{isWindowMaximized ? <RestoreIcon /> : <MaximizeIcon />}</button>
+        <button className="toolbar-button toolbar-icon-button window-control-button window-close-button" type="button" tabIndex={-1} aria-label="Close window" title="Close window" onClick={() => void window.markdownBrowser.windowClose()}><CloseIcon /></button>
       </header>
       <section className="document-area" role="tabpanel">
         {explorerVisible ? (

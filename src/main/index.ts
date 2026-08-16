@@ -370,6 +370,24 @@ async function loadWindowContent(window: BrowserWindow): Promise<void> {
   }
 }
 
+function registerWindowControlHandlers(): void {
+  ipcMain.handle('window:minimize', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+  ipcMain.handle('window:toggle-maximize', (event) => {
+    const window = BrowserWindow.fromWebContents(event.sender)
+    if (!window) return
+    if (window.isMaximized()) window.unmaximize()
+    else window.maximize()
+  })
+  ipcMain.handle('window:close', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+  ipcMain.handle('window:is-maximized', (event) => (
+    BrowserWindow.fromWebContents(event.sender)?.isMaximized() ?? false
+  ))
+}
+
 function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFileState | null> = succeeded(null)): BrowserWindow {
   const window = new BrowserWindow({
     width: 1200,
@@ -377,6 +395,7 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
     minWidth: 800,
     minHeight: 600,
     show: false,
+    frame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -400,6 +419,8 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
     initialMarkdownFiles.set(webContentsId, initialMarkdownResult)
   }
   window.once('ready-to-show', () => window.show())
+  window.on('maximize', () => window.webContents.send('window:maximize-changed', true))
+  window.on('unmaximize', () => window.webContents.send('window:maximize-changed', false))
   window.on('closed', () => {
     windowRoots.delete(webContentsId)
     initialMarkdownFiles.delete(webContentsId)
@@ -425,6 +446,7 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
 app.whenReady().then(async () => {
   configureContentSecurityPolicy()
   registerFileSystemHandlers()
+  registerWindowControlHandlers()
   const initialFileResult = await initialMarkdownFileFromArguments()
   createWindow(initialFileResult)
 

@@ -55,6 +55,11 @@ interface MarkdownBrowserApi {
   writeClipboardText: (text: string) => Promise<FileSystemResult<null>>
   consumeInitialMarkdownFile: () => Promise<FileSystemResult<InitialMarkdownFile | null>>
   openExternalLink: (url: string) => Promise<FileSystemResult<null>>
+  windowMinimize: () => Promise<void>
+  windowToggleMaximize: () => Promise<void>
+  windowClose: () => Promise<void>
+  windowIsMaximized: () => Promise<boolean>
+  onWindowMaximizeChange: (callback: (isMaximized: boolean) => void) => () => void
 }
 
 interface Window {

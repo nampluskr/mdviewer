@@ -36,5 +36,14 @@ contextBridge.exposeInMainWorld('markdownBrowser', {
     typeof url === 'string'
       ? ipcRenderer.invoke('shell:open-external-link', url)
       : invalidPath('A valid URL is required.')
-  )
+  ),
+  windowMinimize: () => ipcRenderer.invoke('window:minimize'),
+  windowToggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
+  windowClose: () => ipcRenderer.invoke('window:close'),
+  windowIsMaximized: () => ipcRenderer.invoke('window:is-maximized'),
+  onWindowMaximizeChange: (callback: (isMaximized: boolean) => void) => {
+    const listener = (_event: Electron.IpcRendererEvent, isMaximized: boolean): void => callback(isMaximized)
+    ipcRenderer.on('window:maximize-changed', listener)
+    return () => ipcRenderer.removeListener('window:maximize-changed', listener)
+  }
 })
