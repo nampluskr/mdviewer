@@ -400,3 +400,26 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 반대 벤더 적대적 검증: 단순 padding 수치 조정(레이아웃·로직 변경 없음)이라 CLAUDE.md 규정상 별도 실행 의무는 없다고 판단해 생략함. I010 항목의 반대 벤더 적대적 검증 실행 횟수는 위 2회(1차 지적 + 2차 재검증)로 재실행 포함 최대 3회 제한 내에서 종료됨.
 - 사용자 확인/피드백: 사용자가 "승인"으로 확인함.
 - 상태: 확정
+
+---
+
+## I011. .md 필터 아이콘화, 탐색기 행 간격 축소, 코드블록 한글 monospace 반영
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. `.md` 선택 체크박스를 다른 아이콘과 같은 스타일로, 테마 전환처럼 아이콘 토글 방식으로 변경
+  2. 탐색기 파일 목록의 폴더/파일 항목 상하 간격을 더 좁게
+  3. 뷰어 영역 코드블록 내 한글에 굴림체가 적용되던 것을 같은 monospace로 반영
+  - 사용자가 이번 항목은 반대 벤더(Codex CLI) 적대적 검증 없이 반영해달라고 명시적으로 요청함.
+- 원인 확인 (구현자: Claude Code, 항목 3): `.markdown-content code`/`.code-panel code`의 `font-family`가 `"Cascadia Code", Consolas, monospace`였는데, 이 셋 모두 한글(Hangul) 글리프를 지원하지 않아 브라우저가 폰트 스택을 벗어나 Windows 기본 대체 글꼴(굴림)로 렌더링했음. 코드 안의 한글이 monospace 계열이 아닌 별도 서체로 보이던 원인.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: `MarkdownFilterIcon({ active })` 컴포넌트 신규 추가 — `EntryIcon`의 마크다운 파일 아이콘(파일 윤곽선 + "M")과 동일한 형태를 켜짐 상태로, 꺼짐 상태는 `EntryIcon`의 텍스트 파일 아이콘(가로줄 3개)으로 표시. 탐색기 헤더의 `<label><input type="checkbox">...</label>`를 다른 헤더 버튼과 동일한 `explorer-header-button toolbar-icon-button` 클래스의 `<button aria-pressed={markdownOnly}>`로 교체(테마 토글 버튼과 동일한 `aria-pressed` 기반 토글 패턴). 클릭 시 동작(`markdownOnly` 토글, `selectedEntryIndex` 초기화)은 기존과 동일하게 유지. 버튼은 Open/Reload와 마찬가지로 기본 Tab 순서에 남겨 I010에서 확정한 키보드 접근성을 유지함(`tabIndex` 미지정).
+  - `src/renderer/src/styles.css`:
+    - `.explorer-filter`, `.explorer-filter input` 규칙 삭제(체크박스 제거로 더 이상 사용하지 않음). `.explorer-header-button[aria-pressed="true"]`에 `color: var(--text)` 추가해 켜짐 상태를 다른 아이콘 토글(테마 버튼)과 동일하게 강조.
+    - `.explorer-file, .explorer-directory, .explorer-parent`의 `padding`을 `.25rem`(상하 4px) → `.1rem .25rem`(상하 1.6px, 좌우는 4px 유지)으로 축소해 행 높이를 좁힘.
+    - `.markdown-content code`, `.code-panel code`의 `font-family`에 `"D2Coding"`(설치돼 있으면 사용)과 `"Malgun Gothic"`(Windows 기본 한글 글꼴, 이미 `:root`의 UI 폰트 스택에서 쓰이고 있어 항상 존재)을 `Consolas`와 `monospace` 사이에 추가. 한글은 `Malgun Gothic`으로, 영문·기호는 계속 `Cascadia Code`/`Consolas`로 렌더링됨(브라우저가 문자 단위로 스택을 순회하며 지원하는 첫 폰트를 선택하므로 혼용 텍스트에서도 영향 없음).
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증: 사용자 명시적 요청에 따라 생략함(CLAUDE.md 4단계 "Critical 지적은 모두 수정" 절차는 검증을 실행한 경우에 적용되며, 이번 항목은 검증 자체를 생략하기로 사용자가 결정함). 남은 위험은 사용자가 직접 빌드로 확인.
+- 남은 위험: 탐색기 행 상하 padding을 `.1rem`(1.6px)까지 줄여 행 높이가 약 20px 아래로 좁아졌다. I003 후속 반영에서 한 차례 다뤘던 WCAG 2.2 24×24px 클릭 대상 권장 기준보다 작아지는 트레이드오프가 있으며, 사용자가 "좀더 좁게"라는 명시적 요청과 함께 이번 항목의 검증 생략을 요청해 그대로 반영함. 실제 사용 중 클릭이 어렵다고 느껴지면 별도 항목으로 조정 가능.
+- 사용자 확인/피드백: 사용자가 "승인"으로 확인함.
+- 상태: 확정

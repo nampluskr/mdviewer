@@ -171,6 +171,23 @@ function OpenFolderIcon(): ReactElement {
   )
 }
 
+function MarkdownFilterIcon({ active }: { active: boolean }): ReactElement {
+  return (
+    <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
+      <rect x="2.5" y="1.5" width="11" height="13" rx="1.2" fill="none" stroke="currentColor" strokeWidth="1.3" />
+      {active ? (
+        <text x="8" y="11" textAnchor="middle" fontSize="7" fontWeight="700" fill="currentColor">M</text>
+      ) : (
+        <>
+          <line x1="4.5" y1="6" x2="11.5" y2="6" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+          <line x1="4.5" y1="9" x2="11.5" y2="9" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+          <line x1="4.5" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.1" strokeLinecap="round" />
+        </>
+      )}
+    </svg>
+  )
+}
+
 function ReloadIcon(): ReactElement {
   return (
     <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
@@ -687,10 +704,9 @@ function App(): ReactElement {
           <>
           <aside className="explorer" style={{ width: explorerWidth, flexBasis: explorerWidth }} aria-label="Explorer" tabIndex={0} onKeyDown={handleExplorerKeyDown}>
             <div className="explorer-header">
-              <label className="explorer-filter" title="Show Markdown files only">
-                <input type="checkbox" checked={markdownOnly} onChange={() => { setMarkdownOnly((value) => !value); setSelectedEntryIndex(0) }} aria-label="Show Markdown files only" />
-                .md
-              </label>
+              <button className="explorer-header-button toolbar-icon-button" type="button" aria-pressed={markdownOnly} aria-label={markdownOnly ? 'Show all supported files' : 'Show Markdown files only'} title={markdownOnly ? 'Show all supported files' : 'Show Markdown files only'} onClick={() => { setMarkdownOnly((value) => !value); setSelectedEntryIndex(0) }}>
+                <MarkdownFilterIcon active={markdownOnly} />
+              </button>
               <div className="explorer-header-actions">
                 <button className="explorer-header-button toolbar-icon-button" type="button" onClick={() => void selectRootFolder()} aria-label="Open Folder" title="Open Folder"><OpenFolderIcon /></button>
                 <button className="explorer-header-button toolbar-icon-button" type="button" disabled={!rootPath || !currentDirectoryPath || directory.loading} onClick={() => void reloadCurrentState()} aria-label="Reload current folder" title="Reload current folder"><ReloadIcon /></button>
