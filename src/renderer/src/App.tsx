@@ -873,7 +873,7 @@ function App(): ReactElement {
                 </button>
                 <span className="root-name-text">{fileName(rootPath)}</span>
               </p>
-            ) : <p className="explorer-status">Select a folder to browse supported files.</p>}
+            ) : <p className="explorer-status">Open Folder (Ctrl+O)</p>}
             {rootPath && currentDirectoryPath && !sameFilePath(currentDirectoryPath, rootPath, platform) ? (
               <p className="current-directory" title={currentDirectoryPath}>{relativeDirectoryPath(rootPath, currentDirectoryPath, platform)}</p>
             ) : null}
@@ -956,7 +956,10 @@ function App(): ReactElement {
           ) : <p className="document-status">This tab is ready for a Markdown document.</p>}
         </div>
       </section>
-      <footer className="status-bar">{formatStatusBar(activeTab)}</footer>
+      <footer className="status-bar">
+        <span className="status-bar-file">{formatStatusBar(activeTab)}</span>
+        <span className="status-bar-app">{`${__APP_NAME__} ${__APP_VERSION__} (${__BUILD_DATE__})`}</span>
+      </footer>
     </main>
   )
 }

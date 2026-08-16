@@ -396,7 +396,6 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
     minHeight: 600,
     show: false,
     frame: false,
-    thickFrame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -407,6 +406,17 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
   })
 
   window.setMenuBarVisibility(false)
+  if (is.dev) {
+    window.webContents.on('console-message', (_event, level, message, line, sourceId) => {
+      console.log(`[renderer:${level}] ${message} (${sourceId}:${line})`)
+    })
+    window.webContents.on('render-process-gone', (_event, details) => {
+      console.log('[renderer] render-process-gone', details)
+    })
+    window.webContents.on('did-fail-load', (_event, errorCode, errorDescription) => {
+      console.log('[renderer] did-fail-load', errorCode, errorDescription)
+    })
+  }
   const webContentsId = window.webContents.id
   if (initialMarkdownResult.ok && initialMarkdownResult.value) {
     windowRoots.set(webContentsId, {
