@@ -1,8 +1,8 @@
-import { Component, isValidElement, useEffect, useRef, useState } from 'react'
+import { Component, Fragment, isValidElement, useEffect, useRef, useState } from 'react'
 import type { ErrorInfo, ReactElement, ReactNode } from 'react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
-import { CodePanel } from './CodePanel'
+import { CodePanel, highlightedCode, lineHighlightTokensExceedBudget, normalizedLanguage } from './CodePanel'
 
 interface Tab {
   id: string
@@ -264,7 +264,7 @@ function ThemeIcon({ theme }: { theme: 'light' | 'dim' | 'dark' }): ReactElement
   if (theme === 'dark') {
     return (
       <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
-        <path d="M13.3 9.7A5.3 5.3 0 0 1 6.7 3a4.3 4.3 0 1 0 6.6 6.7z" fill="currentColor" stroke="none" />
+        <circle cx="8" cy="8" r="5.3" fill="currentColor" stroke="none" />
       </svg>
     )
   }
@@ -278,17 +278,7 @@ function ThemeIcon({ theme }: { theme: 'light' | 'dim' | 'dark' }): ReactElement
   }
   return (
     <svg className="toolbar-icon" viewBox="0 0 16 16" aria-hidden="true">
-      <circle cx="8" cy="8" r="3" fill="none" stroke="currentColor" strokeWidth="1.3" />
-      <g stroke="currentColor" strokeWidth="1.3" strokeLinecap="round">
-        <line x1="8" y1="1.4" x2="8" y2="3" />
-        <line x1="8" y1="13" x2="8" y2="14.6" />
-        <line x1="1.4" y1="8" x2="3" y2="8" />
-        <line x1="13" y1="8" x2="14.6" y2="8" />
-        <line x1="3.3" y1="3.3" x2="4.4" y2="4.4" />
-        <line x1="11.6" y1="11.6" x2="12.7" y2="12.7" />
-        <line x1="3.3" y1="12.7" x2="4.4" y2="11.6" />
-        <line x1="11.6" y1="4.4" x2="12.7" y2="3.3" />
-      </g>
+      <circle cx="8" cy="8" r="5.3" fill="none" stroke="currentColor" strokeWidth="1.3" />
     </svg>
   )
 }
@@ -332,6 +322,34 @@ function LocalImage({ alt, baseFilePath, source }: { alt?: string; baseFilePath:
   return <img src={state.source} alt={alt ?? ''} />
 }
 
+const MAX_NUMBERED_VIEWER_LINES = 20000
+const MAX_HIGHLIGHTED_VIEWER_LINES = 5000
+const MAX_HIGHLIGHTED_TOKENS = 20000
+
+function PlainCodeViewer({ content, language }: { content: string; language: string | null }): ReactElement {
+  const lines = content.split('\n')
+  if (lines.length > MAX_NUMBERED_VIEWER_LINES) {
+    return <pre className="code-viewer-pre code-viewer-plain"><code>{content}</code></pre>
+  }
+  const normalizedLang = lines.length <= MAX_HIGHLIGHTED_VIEWER_LINES ? normalizedLanguage(language) : null
+  // Line-count alone can't bound worst-case DOM node count: a single very token-dense line
+  // (e.g. a huge comma-separated number list) can still explode into hundreds of thousands of
+  // <span> elements. The budget check tokenizes per line (matching how highlightedCode() is
+  // actually called below) so it can't be fooled by content a whole-file pass would otherwise
+  // collapse into one multi-line token (e.g. a block comment).
+  const displayLanguage = normalizedLang && !lineHighlightTokensExceedBudget(lines, MAX_HIGHLIGHTED_TOKENS) ? normalizedLang : null
+  return (
+    <pre className="code-viewer-pre code-viewer-numbered">
+      {lines.map((line, index) => (
+        <Fragment key={index}>
+          <span className="code-viewer-line-number">{index + 1}</span>
+          <span className="code-viewer-line-text">{displayLanguage ? highlightedCode(line, displayLanguage) : line}</span>
+        </Fragment>
+      ))}
+    </pre>
+  )
+}
+
 function App(): ReactElement {
   const platform = window.markdownBrowser?.platform
   const [rootPath, setRootPath] = useState<string | null>(null)
@@ -365,6 +383,7 @@ function App(): ReactElement {
   const parentButtonRef = useRef<HTMLButtonElement | null>(null)
   const explorerRef = useRef<HTMLElement | null>(null)
   const restoreExplorerFocus = useRef(false)
+  const pendingSelectChildPath = useRef<string | null>(null)
 
   useEffect(() => {
     const loadInitialMarkdownFile = async (): Promise<void> => {
@@ -415,8 +434,19 @@ function App(): ReactElement {
   useEffect(() => {
     if (directory.loading || !restoreExplorerFocus.current) return
     restoreExplorerFocus.current = false
+    const childPath = pendingSelectChildPath.current
+    pendingSelectChildPath.current = null
+    let targetIndex = 0
+    if (childPath) {
+      const entries = markdownOnly
+        ? directory.entries.filter((entry) => entry.type === 'directory' || entry.type === 'markdown')
+        : directory.entries
+      const matchIndex = entries.findIndex((entry) => sameFilePath(entry.path, childPath, platform))
+      if (matchIndex >= 0) targetIndex = matchIndex
+    }
+    if (targetIndex !== 0) setSelectedEntryIndex(targetIndex)
     const usableParentButton = parentButtonRef.current && !parentButtonRef.current.disabled ? parentButtonRef.current : null
-    const target = explorerEntryRefs.current.get(0) ?? usableParentButton ?? explorerRef.current
+    const target = explorerEntryRefs.current.get(targetIndex) ?? usableParentButton ?? explorerRef.current
     target?.focus()
   }, [directory])
 
@@ -630,8 +660,9 @@ function App(): ReactElement {
     }
   }
 
-  const navigateToDirectory = (directoryPath: string): void => {
+  const navigateToDirectory = (directoryPath: string, selectChildPath: string | null = null): void => {
     restoreExplorerFocus.current = true
+    pendingSelectChildPath.current = selectChildPath
     setCurrentDirectoryPath(directoryPath)
     setFolderError(null)
     void loadDirectory(directoryPath)
@@ -743,7 +774,7 @@ function App(): ReactElement {
     if ((event.key === 'ArrowLeft' || event.key === 'Backspace') && !sameFilePath(currentDirectoryPath, rootPath, platform)) {
       event.preventDefault()
       const parent = parentDirectory(currentDirectoryPath)
-      if (parent) navigateToDirectory(parent)
+      if (parent) navigateToDirectory(parent, currentDirectoryPath)
       return
     }
     if (event.key === 'ArrowRight' || event.key === 'Enter') {
@@ -763,7 +794,7 @@ function App(): ReactElement {
     if (!resizingExplorer) return
     const minimumWidth = 192
     const maximumWidth = Math.max(minimumWidth, Math.floor(window.innerWidth * 0.45))
-    setExplorerWidth(Math.min(Math.max(event.clientX, minimumWidth), maximumWidth))
+    setExplorerWidth(Math.min(Math.max(event.clientX - 1, minimumWidth), maximumWidth))
   }
 
   const stopExplorerResize = (): void => setResizingExplorer(false)
@@ -853,7 +884,7 @@ function App(): ReactElement {
                     <button ref={parentButtonRef} className="explorer-parent" type="button" tabIndex={-1} disabled={sameFilePath(currentDirectoryPath, rootPath, platform)} onClick={() => {
                       if (sameFilePath(currentDirectoryPath, rootPath, platform)) return
                       const parent = parentDirectory(currentDirectoryPath)
-                      if (parent) navigateToDirectory(parent)
+                      if (parent) navigateToDirectory(parent, currentDirectoryPath)
                     }}>..</button>
                   </li>
                   {visibleEntries.map((entry, index) => (
@@ -919,7 +950,7 @@ function App(): ReactElement {
               </article>
             ) : activeTab.content.trim().length === 0 ? <p className="document-status">This {activeTab.kind === 'markdown' ? 'Markdown' : 'text'} file is empty.</p> : (
               <div className="code-viewer">
-                <CodePanel content={activeTab.content} language={activeTab.language} label={`${activeTab.title} contents`} />
+                <PlainCodeViewer content={activeTab.content} language={activeTab.language} />
               </div>
             )
           ) : <p className="document-status">This tab is ready for a Markdown document.</p>}

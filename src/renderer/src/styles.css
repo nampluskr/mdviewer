@@ -83,7 +83,7 @@
 body { margin: 0; }
 .is-resizing, .is-resizing * { cursor: col-resize !important; user-select: none; }
 #root { height: 100vh; }
-.app-shell { display: flex; flex-direction: column; height: 100vh; }
+.app-shell { display: flex; flex-direction: column; height: 100vh; border: 1px solid var(--border); }
 
 .new-tab-button, .toolbar-button, .explorer-file, .explorer-directory, .explorer-parent {
   border: 0;
@@ -185,6 +185,14 @@ body { margin: 0; }
 .markdown-content tr:nth-child(even) { background: var(--surface); }
 .markdown-content img { display: block; height: auto; max-width: 100%; }
 .markdown-image-error { color: var(--error); font-size: .875em; }
+
+.code-viewer { max-width: 72rem; }
+.code-viewer-pre { margin: 0; max-width: 100%; overflow: auto; color: var(--text); font-family: "Cascadia Code", "D2Coding", Consolas, "Malgun Gothic", monospace; font-size: .875em; line-height: 1.5; padding: 0; }
+.code-viewer-pre.code-viewer-numbered { display: grid; grid-template-columns: auto 1fr; }
+.code-viewer-line-number { grid-column: 1; text-align: right; color: var(--muted-text); user-select: none; padding-right: 1em; }
+.code-viewer-line-text { grid-column: 2; white-space: pre; }
+.code-viewer-pre.code-viewer-plain { padding: 0; }
+.code-viewer-pre.code-viewer-plain code { white-space: pre; }
 
 .code-panel { max-width: 72rem; }
 .code-panel-toolbar { display: flex; align-items: center; justify-content: space-between; border: 1px solid var(--border); border-bottom: 0; border-radius: 6px 6px 0 0; background: var(--code-surface); color: var(--code-text); padding: .45rem .65rem; }

@@ -654,3 +654,111 @@ v0.2 backlog 기반 일괄 개선을 마친 뒤, 사용자가 실제 사용해�
 - 남은 위험: 없음. Major·나머지 Minor 1건은 모두 사용자 요청 또는 기존 확정 규칙과 일치하는 의도된 동작으로 확인됨.
 - 사용자 확인/피드백: 사용자가 "제대로 잘 실행됩니다. 사용자가 원하는 바 그대로 입니다."로 확인함.
 - 상태: 확정
+
+---
+
+## I020. 창 테두리 색, 테마 아이콘 형태 통일, 탐색기 상위 이동 시 이전 폴더 선택 유지
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 창 바깥 테두리를 테마에 맞는 그레이 색으로 변경
+  2. 테마 전환 아이콘을 그레이(Dim)의 원 형태로 통일 — Dim은 그대로 두고, 화이트/다크는 원 내부를 "빈 원 → 채운 원"으로 변경
+  3. 탐색기에서 Enter/→로 하위 폴더 이동 후 Backspace/←로 상위 폴더로 돌아왔을 때, 맨 위 항목이 아니라 방금 나온 폴더가 선택되어 있어야 함
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/styles.css`: `.app-shell`에 `border: 1px solid var(--border);` 추가. I019에서 `frame: false`로 전환하며 없어진 OS 창 테두리를 대체해, 테마별 `--border` 변수 색(라이트/딤/다크 각각 다른 회색조)으로 창 전체를 감싸도록 함.
+  - `src/renderer/src/App.tsx`: `ThemeIcon`의 `dark` 분기를 초승달 `<path>`에서 채운 원(`fill="currentColor"`)으로, `light` 분기를 해 모양(작은 원+광선 8개)에서 빈 원(`fill="none"`)으로 교체. `dim` 분기(반원 채움 원)는 변경 없이 유지 — 세 상태가 "빈 원 → 반원 채움 → 채운 원"으로 하나의 원 모티프를 공유하도록 통일.
+  - `src/renderer/src/App.tsx`: `navigateToDirectory(directoryPath, selectChildPath = null)`에 두 번째 인자 추가. 상위 폴더로 이동하는 두 지점(키보드 ArrowLeft/Backspace, ".." 버튼 클릭)에서만 `navigateToDirectory(parent, currentDirectoryPath)`로 호출해 "방금 나온 폴더 경로"를 새 `pendingSelectChildPath` ref에 전달. 하위 폴더 진입(`activateExplorerEntry`)이나 루트 이동 등 다른 호출부는 변경 없이 인자 없이 호출(기존과 동일하게 첫 항목 선택). 포커스 복원 `useEffect`가 `pendingSelectChildPath`가 있으면 새로 로드된 목록에서 `sameFilePath`로 일치하는 항목의 인덱스를 찾아 그 항목을 선택·포커스하고, 없으면 기존처럼 첫 항목으로 대체.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 0건, Major 0건, Minor 1건. 상위 이동 선택 복원 로직이 렌더링과 동일한 필터 목록을 사용하고, `markdownOnly` 최신 값을 반영하며, 후속 탐색 시 `pendingSelectChildPath`를 올바르게 덮어쓰고, `directoryLoadVersion`으로 오래된 응답을 거르며, 인덱스 복원 전 0으로 리셋되어 이후 키보드 탐색이 범위를 벗어나지 않음을 확인. 3개 테마 아이콘이 의도한 "빈 원/반원/채운 원" 진행을 정확히 유지함을 확인. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 0 | 해당 없음 | - |
+  | Major | 0 | 해당 없음 | - |
+  | Minor | 1 | 수정 | "`.app-shell`에 1px 테두리가 추가되면서 탐색기 리사이저의 `event.clientX` 기준 좌표가 실제 문서 영역 시작점(테두리만큼 오른쪽으로 밀림)과 1px 어긋난다"는 지적(오버플로우·클리핑은 없고 리사이저 좌표 정렬만의 문제) → `resizeExplorer`에서 `event.clientX` 대신 `event.clientX - 1`을 사용하도록 수정. |
+
+- Critical 수정 및 재검증: 해당 없음 (Critical 지적 없음). Minor 수정 후 CLAUDE.md 규정상 재검증 의무는 없어 반대 벤더 재실행은 생략, typecheck·테스트·빌드로 직접 확인함. I020 항목의 반대 벤더 적대적 검증 실행은 1회로 종료(재실행 없이 최대 3회 제한 내).
+- 남은 위험: 없음.
+- 사용자 확인/피드백: 사용자가 "메인 창 바깥에 파란색 테두리가 계속 남아 있다"고 재현 보고.
+
+### 추가 반영 (같은 I020 항목 내 후속 요청)
+
+- 원인 분석 (구현자: Claude Code): 이 파란 테두리는 `.app-shell`에 추가한 CSS 테두리가 아니라, Windows가 `frame: false` 창에 자동으로 그리는 DWM(창 관리자) 액센트색 테두리다. 웹 콘텐츠 바깥, OS 컴포지터가 직접 그리는 것이라 CSS로는 제어할 수 없다.
+- 변경 내용 (구현자: Claude Code): `src/main/index.ts`의 `BrowserWindow` 생성 옵션에 `thickFrame: false`(Windows 전용) 추가. 이 옵션이 표준 창 프레임(WS_THICKFRAME — 그림자, DWM 액센트 테두리, 크기 조절 애니메이션 포함)을 비활성화한다.
+- 검증: `npm run typecheck`, `npm run build` 통과. (그림자/크기 조절 애니메이션이 함께 사라질 수 있고 드물게 가장자리 드래그 리사이즈에 영향을 줄 수 있다는 트레이드오프를 사용자에게 안내하고 재확인 요청함.)
+- 사용자 확인/피드백: 사용자가 "창 테두리 문제는 완전히 해결되었음을 확인했습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I021. 비-마크다운 텍스트/코드 뷰어를 순수 텍스트+줄번호로 표시, 대용량 파일 응답없음 원인 제거
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용:
+  1. 뷰어 영역에서 마크다운이 아닌 텍스트/코드 파일에 코드블록 틀과 Copy 아이콘이 보이는데, 이를 없애고 텍스트/코드만 보이게 하고 싶음.
+  2. 코드/긴 JSON 파일 로딩이 느리고 가끔 "응답 없음"이 뜨는데 원인이 무엇인지, 필연적 문제라면 뷰어에서 마크다운 문서만 보이게 해야 하는지.
+  3. (계획 논의 중 추가) 이 텍스트/코드 뷰어에 줄번호를 GitHub 스타일로(토글 없이 항상) 표시하고, 줄번호를 포함해 드래그 선택해도 줄번호는 선택되지 않게.
+- 원인 분석 (구현자: Claude Code, Plan Mode): `src/renderer/src/CodePanel.tsx`의 `highlightedCode()`가 정규식 `split()` 결과의 모든 조각(매치된 토큰뿐 아니라 공백·괄호·쉼표 등 매치 안 된 부분까지)을 각각 `<span>`으로 렌더링한다. JSON처럼 토큰이 촘촘한 파일은 이 방식으로 수만 개의 `<span>` DOM 노드가 생성되어 렌더링·레이아웃이 급격히 느려지고 렌더러 프로세스가 멈춰 "응답 없음"으로 이어질 수 있다. `512 * 1024`바이트 이상일 때만 강조를 건너뛰는 기존 가드가 있지만, 그 이하 크기라도 토큰 밀도가 높으면 노드 수가 폭발적으로 늘어나 막지 못한다. 이 비용은 마크다운이 아닌 파일을 직접 여는 "코드 뷰어" 경로에서만 발생하며(마크다운 문서 안의 펜스 코드블록은 대체로 훨씬 작음), 사용자가 원하는 "코드블록 틀·Copy 없이 텍스트만" 요구사항을 그대로 구현(=이 경로에서 `CodePanel` 대신 강조 없는 뷰어 사용)하면 성능 문제도 함께 해결됨을 계획 단계에서 확인. 마크다운 필요 없음 — 문제는 표시 방식 선택으로 해결 가능함을 확인.
+- 변경 내용 (구현자: Claude Code):
+  - `src/renderer/src/App.tsx`: 신규 `PlainCodeViewer({ content })` 컴포넌트 추가. 줄 단위(`content.split('\n')`)로 나눠 줄번호+텍스트를 렌더링. 마크다운이 아닌 파일을 여는 "코드 뷰어" 분기가 `<CodePanel>` 대신 이 컴포넌트를 쓰도록 교체(강조·툴바·Copy 버튼 없음). 마크다운 문서 안의 펜스 코드블록은 기존처럼 `<CodePanel>`(툴바+Copy+강조) 그대로 유지.
+  - `src/renderer/src/styles.css`: `.code-viewer-pre`/`.code-viewer-line-number`(`user-select: none`으로 드래그 선택 시 제외)/`.code-viewer-line-text` 신규 스타일. CSS Grid(`grid-template-columns: auto 1fr`)로 줄번호 열 폭을 파일 전체에서 공유해 정렬을 맞춤.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증 (2회)
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 1건, Minor 2건. CRLF 줄바꿈 잔여 `\r`은 `white-space: pre`에서 공백처럼 취급되어 문제 없음, 빈 파일 가드 정상, 긴 한 줄도 레이아웃 깨짐 없음을 확인. |
+  | 2 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical·Minor 재검증 — 모두 해소 확인, 남은 지적 없음. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 1 | 수정 | "짧은 줄이 매우 많은 파일(예: 10 MiB `x\n` 반복 ≈ 520만 줄)은 여전히 줄 수만큼(약 1,570만 개) `<div>`/`<span>`을 만들어 동일한 응답없음이 재발한다"는 지적(기존 512KiB 바이트 기준 가드는 줄 수 폭증을 못 막음) → `MAX_NUMBERED_VIEWER_LINES = 20000` 상수를 추가해, 줄 수가 이를 초과하면 줄번호 없이 `<pre><code>{content}</code></pre>` 단일 텍스트 노드로 대체 렌더링하도록 수정(기존 CodePanel의 바이트 기준 강조-생략 가드와 같은 성격의 안전장치를 줄 수 기준으로 추가). 최악의 경우도 20,000줄×2 span=4만 개로 제한됨을 2차 재검증에서 확인. |
+  | Minor | 1 | 수정 | "각 줄이 독립된 flex 컨테이너라 줄번호 자릿수가 늘어나면(예: 100,000번째 줄) 그 줄만 밀려나 거터가 줄마다 어긋난다"는 지적 → 줄 단위 `<div>` 래퍼를 제거하고 `<pre>` 직계 자식으로 번호·텍스트 `<span>`을 `Fragment`로 배치, `.code-viewer-pre.code-viewer-numbered`를 CSS Grid(`grid-template-columns: auto 1fr`)로 바꿔 모든 행이 같은 첫 번째 열 폭을 공유하도록 수정. 2차 재검증에서 해소 확인. |
+  | Minor | 1 | 수용(의도된 결과) | "`Tab.language`가 더 이상 이 렌더링 경로에서 읽히지 않아 고아 상태처럼 보인다"는 지적 → 마크다운 펜스 코드블록(`CodePanel`)에서는 계속 쓰이고, 표준 파일 뷰어에서 언어 라벨을 없앤 것은 사용자가 명시적으로 요청한 "코드블록 틀 제거"의 직접적 결과이므로 새로운 결함이 아님. 코드 수정 없이 유지. |
+
+- Critical 수정 및 재검증: 1건을 수정하고 CLAUDE.md 규정에 따라 동일 벤더로 2차 재검증까지 실행해 해소 확인(재실행 포함 총 2회, 최대 3회 제한 내).
+- 남은 위험: 없음.
+- 사용자 확인/피드백: 사용자가 "정상 작동함을 확인했습니다"로 확인함.
+- 상태: 확정
+
+### 추가 반영 (같은 I021 항목 내 후속 요청 — 박스 제거)
+
+- 요청 내용: 텍스트/코드 뷰어가 왜 박스(테두리+배경) 형태로 보이는지 문의. 사용자가 "박스 완전히 제거, 문서 배경에 그대로 녹아듦"으로 결정.
+- 변경 내용 (구현자: Claude Code, Plan Mode 없이 직접 처리 — 단순 CSS 제거): `src/renderer/src/styles.css`의 `.code-viewer-pre`에서 `border`, `border-radius`, `background`를 제거하고 `color`를 `var(--code-text)` 대신 `var(--text)`로, `padding`을 `1rem 0` → `0`으로 변경. `.code-viewer-pre.code-viewer-plain`의 `padding`도 `1rem` → `0`. `.code-viewer-line-number`/`.code-viewer-line-text`의 박스 인셋용 여백(좌우 `1rem`)도 제거하고 번호-텍스트 사이 간격만(`padding-right: 1em`) 유지.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증: 단순 CSS 속성 제거(레이아웃·로직 변경 없음)라 생략함.
+- 사용자 확인/피드백: 사용자가 "정상 작동함을 확인했습니다"로 확인함.
+- 상태: 확정
+
+---
+
+## I023. 텍스트/코드 뷰어에 안전장치 포함 문법 강조 재도입
+
+- 요청 일시 / 요청자: 2026-08-16 / nampluskr
+- 요청 내용: I021에서 강조를 제거했는데, 다시 강조를 넣으면 이전처럼 로딩이 느려지는지 문의. 안전장치를 포함해 다시 추가하기로 결정(Plan Mode로 계획 수립 후 승인).
+- 변경 내용 (구현자: Claude Code, Plan Mode 승인 후 구현):
+  - `src/renderer/src/CodePanel.tsx`: `normalizedLanguage`, `highlightedCode`를 `export`로 전환해 `App.tsx`에서 재사용. `highlightedCode()`의 근본 원인 수정 — 정규식 `split()` 결과 중 매치되지 않은 조각을 더 이상 `<span>`으로 감싸지 않고 일반 문자열로 반환(React가 별도 DOM 노드 없이 텍스트로 렌더링). 이 수정은 마크다운 펜스 코드블록에도 동일 적용되어 `CodePanel.tsx` 전체의 노드 수가 줄어듦.
+  - `src/renderer/src/App.tsx`: `PlainCodeViewer`에 `language` prop 추가. `MAX_HIGHLIGHTED_VIEWER_LINES = 5000`(기존 `MAX_NUMBERED_VIEWER_LINES = 20000`과 별도) 도입해 줄 수가 이 이하일 때만 언어 인식·강조를 시도하도록 함. 각 줄을 `highlightedCode(line, language)`로 개별 강조.
+- 검증: `npm run typecheck`, `npm run test`(13개 통과), `npm run build` 모두 통과.
+- 반대 벤더 적대적 검증 (3회 — 이번 항목의 CLAUDE.md 허용 상한)
+
+  | 회차 | 검토자 | 결과 요약 |
+  |---|---|---|
+  | 1 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | Critical 1건, Major 1건. "매치 안 된 조각을 문자열로 바꿔도, 토큰이 매우 촘촘한 단일 긴 줄(예: 500KB에 약 17만 개 숫자 토큰)은 여전히 약 78만 개 DOM 노드를 만들어 응답없음이 재발할 수 있다"—줄 수·줄 길이 기준만으로는 부족하며 집계 토큰/노드 예산이 필요하다고 지적. |
+  | 2 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | 1차 Critical 수정(전체 파일 기준 토큰 수 집계 `estimateTokenCount`)에 대해 **재검증 실패** — 전체 파일 기준 계산은 여러 줄에 걸친 블록 주석처럼 줄바꿈을 넘나드는 패턴을 "토큰 1개"로 뭉쳐 과소 집계하지만, 실제 렌더링은 줄 단위로 다시 토큰화해 그 안의 숫자·키워드를 전부 강조하므로 안전장치를 우회할 수 있음을 구체적 재현(5,000줄 파일, 전체 추정 1 vs 실제 줄 단위 20,001)으로 확인. |
+  | 3 | Codex CLI (`gpt-5.6-sol`, `--sandbox read-only`) | 2차 수정(줄 단위로 정확히 집계하는 `lineHighlightTokensExceedBudget`) 재검증 — Critical·Major·Minor 모두 0건, 남은 지적 없음. |
+
+  | 심각도 | 건수 | 처리 상태 | 근거 |
+  |---|---|---|---|
+  | Critical | 1 | 수정(2단계) | 1차 시도(`estimateTokenCount`, 전체 파일 1회 매치)가 2차 검증에서 "줄 단위 렌더링과 집계 방식이 달라 안전장치가 우회된다"는 재지적을 받아, `CodePanel.tsx`에 `lineHighlightTokensExceedBudget(lines, maxTokens, maxLineLength=20000)`를 새로 추가 — 실제 렌더링과 동일하게 줄마다 개별 매치해 누적하고, 줄 길이·누적 토큰 수 중 하나라도 초과하면 즉시 중단(조기 종료)하도록 재구현. `MAX_HIGHLIGHTED_TOKENS = 20000`. 3차 재검증에서 완전히 해소 확인. |
+  | Major | 1 | 수정 | "`content.match()`가 예산 체크 전에 전체 매치 배열을 미리 만들어, 매우 촘촘한 콘텐츠에서 할당·일시정지를 유발할 수 있다"는 지적 → 위 `lineHighlightTokensExceedBudget`의 줄 길이 사전 체크(20,000자 초과 시 `match()` 호출 자체를 생략)와 누적 조기 종료로 함께 해결. 3차 재검증에서 "1회성 배열 할당 수준으로 허용 가능, 더 이상 Major 아님"으로 확인. |
+  | Minor | 1 | 수용(의도된·사전 고지된 트레이드오프) | "줄 단위 강조라 여러 줄에 걸친 블록 주석·템플릿 리터럴 등은 줄 경계에서 강조가 끊겨 내부가 코드처럼 잘못 강조될 수 있다"는 지적 → 구현 전 계획 단계에서 이미 사용자에게 명시적으로 고지하고 승인받은 제약(이 앱의 강조기는 완전한 렉서가 아닌 정규식 근사치). 안전장치(Critical 수정)는 이 부정확성 자체를 고치지 않고, 안전장치가 이 부정확성 때문에 우회되지 않도록만 고침 — 별도로 코드 수정하지 않음. |
+
+- Critical 수정 및 재검증: 총 2회 수정 시도, 반대 벤더 재검증 3회(재실행 포함, 이번 항목의 CLAUDE.md 허용 상한)로 완전히 해소 확인.
+- 남은 위험: 3차 검토가 명시한 대로, 예산 초과를 넘는 "그 줄"에 대한 매치 자체는 중단 전에 완료되어야 하므로(줄 원자 단위 처리) 병적으로 긴 단일 줄(줄 길이 상한 2만 자 이내)에서 정규식 계산 자체의 짧은 지연은 있을 수 있으나, 길이 상한으로 유계이며 보고할 수준은 아니라고 검토자가 명시함.
+- 사용자 확인/피드백: 사용자가 "정상 작동함을 확인했습니다"로 확인함.
+- 상태: 확정

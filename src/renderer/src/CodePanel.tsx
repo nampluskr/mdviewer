@@ -32,7 +32,7 @@ function CopyIcon(): ReactElement {
   )
 }
 
-function normalizedLanguage(language: string | null): string | null {
+export function normalizedLanguage(language: string | null): string | null {
   if (!language) return null
   const normalized = language.toLowerCase()
   const resolved = languageAliases[normalized] ?? normalized
@@ -48,13 +48,30 @@ function tokenClass(token: string, language: string | null): string | null {
   return null
 }
 
-function highlightedCode(content: string, language: string | null): ReactElement[] | string {
+const tokenPattern = /(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*":|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b\d+(?:\.\d+)?\b|\b[A-Za-z_][A-Za-z0-9_]*\b)/g
+
+// Mirrors how a per-line highlighter actually tokenizes (one independent match pass per line,
+// no cross-line matches), so this budget can't be bypassed by content the whole-file pattern
+// would otherwise collapse into a single multi-line token (e.g. a block comment). Bails out of
+// both the length check and the running total as early as possible to avoid materializing a huge
+// match array for a single pathological line.
+export function lineHighlightTokensExceedBudget(lines: string[], maxTokens: number, maxLineLength = 20000): boolean {
+  let total = 0
+  for (const line of lines) {
+    if (line.length > maxLineLength) return true
+    const matches = line.match(tokenPattern)
+    if (matches) total += matches.length
+    if (total > maxTokens) return true
+  }
+  return false
+}
+
+export function highlightedCode(content: string, language: string | null): (ReactElement | string)[] | string {
   if (!language || content.length > 512 * 1024) return content
-  const pattern = /(\/\/[^\n]*|#[^\n]*|\/\*[\s\S]*?\*\/|"(?:\\.|[^"\\])*":|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`|\b\d+(?:\.\d+)?\b|\b[A-Za-z_][A-Za-z0-9_]*\b)/g
-  const parts = content.split(pattern)
+  const parts = content.split(tokenPattern)
   return parts.map((part, index) => {
     const className = tokenClass(part, language)
-    return className ? <span className={className} key={index}>{part}</span> : <span key={index}>{part}</span>
+    return className ? <span className={className} key={index}>{part}</span> : part
   })
 }
 

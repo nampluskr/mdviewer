@@ -396,6 +396,7 @@ function createWindow(initialMarkdownResult: FileSystemResult<InitialMarkdownFil
     minHeight: 600,
     show: false,
     frame: false,
+    thickFrame: false,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
